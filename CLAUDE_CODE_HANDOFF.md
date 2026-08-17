@@ -7,7 +7,7 @@ Cowork(claude.ai)에서 여기까지 진행한 프로젝트를 클로드 코드(
 구글 스프레드시트를 DB로, 구글 Apps Script(HtmlService)를 백엔드+호스팅으로 쓰는 TRPG(테이블탑 롤플레잉 게임) 동반자 웹앱입니다. 원래는 소규모 고정 파티(2~6명)용으로 시작했고, 이후 1인 플레이(솔로 모드)가 추가됐습니다. 별도 서버/DB 없이 개인 구글 계정만으로 배포·운영되는 것이 핵심 제약입니다.
 
 - 스프레드시트: **TRPG 플랫폼 - 캐릭터&세션 DB** — https://docs.google.com/spreadsheets/d/1WJQVL4I38ivCE5zjNCNCpQ2QcROeUuKMkkpFLMoKB_o/edit
-- 배포 방식: Apps Script 프로젝트(스프레드시트에 바인딩) → `Code.gs`(백엔드) + `index.html`(프론트 전체, SPA 한 파일) → "웹앱으로 배포"
+- 배포 방식(B안 적용 후, 최신): GitHub 저장소 https://github.com/G909G09/trpg-simul — `backend/Code.gs`를 Apps Script에 붙여넣어 JSON API로 웹앱 배포, `docs/index.html`은 GitHub Pages로 서빙(**플레이어 공유 URL: https://g909g09.github.io/trpg-simul/**).
 - 사용자에게 배포 방법을 안내하는 문서가 `설치가이드.md`이며, 코드를 바꿀 때마다 이 문서도 필요시 함께 갱신해야 합니다.
 
 ## 절대 지켜야 할 제약
