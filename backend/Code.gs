@@ -30,7 +30,8 @@ const API_METHODS = {
   getNPCs, upsertNPC, deleteNPC, adjustNpcHP,
   getSoloCharacters, upsertSoloCharacter, deleteSoloCharacter, adjustSoloCharacterHP,
   getGameState, setGameState, getSoloProgress, setSoloProgress,
-  addSessionLog, getSessionLog, rollDice, getRollLog
+  addSessionLog, getSessionLog, rollDice, getRollLog,
+  getFeedSnapshot
 };
 
 function jsonOutput_(obj) {
@@ -373,4 +374,21 @@ function getRollLog(limit) {
   const rows = sheetToObjects_(getSheet_(SHEETS.ROLL));
   rows.reverse();
   return limit ? rows.slice(0, limit) : rows;
+}
+
+// ============ 폴링용 배치 조회 ============
+// 프론트가 몇 초마다 여러 함수(캐릭터/주사위기록/세션로그/[GM모드면]NPC+게임상태)를
+// 따로따로 호출하면 그만큼 Apps Script 왕복이 배로 늘어 체감 지연이 커진다.
+// 한 번의 실행 안에서 다 모아 반환해서 폴링 1회당 API 호출을 1번으로 줄인다.
+function getFeedSnapshot(includeGm) {
+  const snapshot = {
+    characters: getCharacters(),
+    rollLog: getRollLog(30),
+    sessionLog: getSessionLog(30)
+  };
+  if (includeGm) {
+    snapshot.npcs = getNPCs();
+    snapshot.gameState = getGameState();
+  }
+  return snapshot;
 }

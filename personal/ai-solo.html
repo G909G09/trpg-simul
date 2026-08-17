@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>개인용 AI 솔로 플레이</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif; background:#12141c; color:#e8e8f0; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 20px 16px 60px; }
+  h1 { font-size: 19px; margin: 4px 0 4px; }
+  .sub { font-size: 13px; color:#8f94ab; margin: 0 0 18px; }
+  .card { background:#1c1f2b; border:1px solid #2c3040; border-radius:14px; padding:16px; margin-bottom:14px; }
+  label { display:block; font-size:13px; color:#a3a8bd; margin-bottom:6px; }
+  input[type=text], textarea {
+    width:100%; background:#12141c; border:1px solid #2c3040; border-radius:10px;
+    color:#e8e8f0; padding:10px; font-size:14px; font-family:inherit;
+  }
+  textarea { min-height:80px; resize:vertical; }
+  button { background:#3987e5; color:#fff; border:none; border-radius:10px; padding:10px 16px; font-size:14px; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:default; }
+  button.secondary { background:#2c3040; }
+  button.small { padding:6px 10px; font-size:12px; }
+  .msg { padding:12px 14px; border-radius:12px; margin-bottom:10px; line-height:1.55; white-space:pre-wrap; }
+  .msg.model { background:#1c1f2b; border:1px solid #2c3040; }
+  .msg.user { background:#25314a; }
+  .row { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .row textarea { flex:1; min-height:44px; }
+  .hint { font-size:12px; color:#7d8296; margin-top:8px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; }
+  .toast {
+    position:fixed; bottom:16px; left:50%; transform:translateX(-50%); background:#2c3040;
+    padding:10px 16px; border-radius:10px; font-size:13px; display:none; max-width: 90%;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>개인용 AI 솔로 플레이</h1>
+  <p class="sub">Gemini API로 그때그때 다른 이야기를 만들어주는 개인 전용 페이지입니다. 파티 공유 배포와는 완전히 분리되어 있으며, 본인의 Gemini API 키로만 동작합니다.</p>
+
+  <div class="card" id="setup-card">
+    <label>개인 Gemini 프록시 URL (별도 Apps Script 웹앱의 /exec 주소)</label>
+    <input type="text" id="proxy-url" placeholder="https://script.google.com/macros/s/.../exec">
+    <div class="hint">이 값은 이 브라우저의 localStorage에만 저장되고 어디로도 전송되지 않습니다. GeminiProxy.gs 배포 방법은 파일 상단 주석을 참고하세요.</div>
+    <div class="row"><button onclick="saveProxyUrl()">저장</button></div>
+  </div>
+
+  <div class="card" id="start-card" style="display:none;">
+    <label>어떤 이야기로 시작할까요? (배경, 캐릭터, 톤 등 자유롭게)</label>
+    <textarea id="concept-input" placeholder="예: 폐허가 된 우주정거장을 홀로 탐사하는 스카우트 로봇의 이야기. 미스터리하고 조용한 톤으로."></textarea>
+    <div class="row">
+      <button onclick="startStory()" id="start-btn">이야기 시작</button>
+      <button class="secondary" onclick="resetProxyUrl()">프록시 주소 변경</button>
+    </div>
+  </div>
+
+  <div class="card" id="story-card" style="display:none;">
+    <div id="messages"></div>
+    <div class="row">
+      <textarea id="action-input" placeholder="다음 행동을 입력하세요..."></textarea>
+      <button onclick="sendAction()" id="send-btn">전송</button>
+    </div>
+    <div class="hint">
+      <span>대화가 길어지면 오래된 turn을 잘라내 토큰 사용량을 억제합니다.</span>
+      <button class="secondary small" onclick="restartStory()">새 이야기 시작</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+  // 순수 서술형 개인용 모드입니다. 주사위/HP 같은 규칙 엔진은 이번 버전에는 없고,
+  // 필요하면 나중에 별도로 확장할 수 있습니다.
+  const MAX_TURNS = 16; // 히스토리를 이 개수만큼만 유지해 토큰 사용량을 억제
+  const SYSTEM_PROMPT = '당신은 TRPG(테이블탑 롤플레잉 게임)의 게임 마스터입니다. 플레이어가 제시한 컨셉을 바탕으로 몰입감 있는 2인칭 서술로 상황을 묘사하고, 매 턴 끝에 플레이어가 선택할 수 있는 방향을 자연스럽게 암시하세요. 한 번에 너무 길게 쓰지 말고, 한국어로 4~8문장 정도로 서술하세요.';
+  let history = []; // [{role:'user'|'model', text:'...'}]
+
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.style.display = 'block';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.style.display = 'none', 2500);
+  }
+
+  function getProxyUrl() { return localStorage.getItem('ai_solo_proxy_url') || ''; }
+
+  function saveProxyUrl() {
+    const v = document.getElementById('proxy-url').value.trim();
+    if (!v) { toast('URL을 입력하세요.'); return; }
+    localStorage.setItem('ai_solo_proxy_url', v);
+    showStartCard();
+  }
+
+  function resetProxyUrl() {
+    document.getElementById('proxy-url').value = getProxyUrl();
+    document.getElementById('setup-card').style.display = 'block';
+    document.getElementById('start-card').style.display = 'none';
+  }
+
+  function showStartCard() {
+    document.getElementById('setup-card').style.display = 'none';
+    document.getElementById('start-card').style.display = 'block';
+  }
+
+  function callProxy(systemPrompt, turns) {
+    return fetch(getProxyUrl(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ systemPrompt: systemPrompt, turns: turns })
+    }).then(r => r.json()).then(res => {
+      if (!res.ok) throw new Error(res.error || '알 수 없는 오류');
+      return res.text;
+    });
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  function renderMessages() {
+    const el = document.getElementById('messages');
+    el.innerHTML = history.map(m => `<div class="msg ${m.role}">${escapeHtml(m.text)}</div>`).join('');
+  }
+
+  function trimHistory() {
+    if (history.length > MAX_TURNS) history = history.slice(history.length - MAX_TURNS);
+  }
+
+  function setBusy(busy) {
+    document.getElementById('send-btn').disabled = busy;
+    document.getElementById('start-btn').disabled = busy;
+  }
+
+  function startStory() {
+    const concept = document.getElementById('concept-input').value.trim();
+    if (!concept) { toast('이야기의 배경이나 컨셉을 입력하세요.'); return; }
+    history = [{ role: 'user', text: concept }];
+    document.getElementById('start-card').style.display = 'none';
+    document.getElementById('story-card').style.display = 'block';
+    renderMessages();
+    setBusy(true);
+    callProxy(SYSTEM_PROMPT, history).then(text => {
+      history.push({ role: 'model', text: text });
+      renderMessages();
+    }).catch(err => toast('오류: ' + err.message)).finally(() => setBusy(false));
+  }
+
+  function sendAction() {
+    const input = document.getElementById('action-input');
+    const action = input.value.trim();
+    if (!action) return;
+    history.push({ role: 'user', text: action });
+    input.value = '';
+    trimHistory();
+    renderMessages();
+    setBusy(true);
+    callProxy(SYSTEM_PROMPT, history).then(text => {
+      history.push({ role: 'model', text: text });
+      trimHistory();
+      renderMessages();
+    }).catch(err => toast('오류: ' + err.message)).finally(() => setBusy(false));
+  }
+
+  function restartStory() {
+    if (!confirm('지금 이야기를 그만두고 새로 시작할까요?')) return;
+    history = [];
+    document.getElementById('story-card').style.display = 'none';
+    document.getElementById('start-card').style.display = 'block';
+    document.getElementById('concept-input').value = '';
+  }
+
+  (function init() {
+    const saved = getProxyUrl();
+    if (saved) { document.getElementById('proxy-url').value = saved; showStartCard(); }
+  })();
+</script>
+</body>
+</html>

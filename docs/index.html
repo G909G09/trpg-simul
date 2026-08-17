@@ -669,7 +669,7 @@
       <div id="solo-view-list" class="solo-view active">
         <div class="card solo-intro-card">
           <h2>솔로 플레이</h2>
-          <p>혼자서도 D&D 기반의 짧은 모험을 떠날 수 있습니다. 발더스 게이트 3 스타일의 캐릭터 생성 위저드로 모험가를 만들고, 분기형 원샷 시나리오 "안개 낀 숲"을 진행해보세요. 선택과 판정 결과에 따라 결말이 달라집니다.</p>
+          <p>혼자서도 D&D 기반의 짧은 모험을 떠날 수 있습니다. 발더스 게이트 3 스타일의 캐릭터 생성 위저드로 모험가를 만들고, 분기형 원샷 시나리오 중 하나를 골라 진행해보세요. 선택과 판정 결과에 따라 결말이 달라집니다.</p>
           <button class="btn" onclick="startSoloWizard()">+ 새 모험가 만들기</button>
         </div>
         <div class="card">
@@ -688,6 +688,15 @@
             <button class="btn" id="wizard-next-btn" onclick="wizardNext()">다음</button>
           </div>
         </div>
+      </div>
+
+      <!-- 시나리오 선택 -->
+      <div id="solo-view-picker" class="solo-view">
+        <div class="scenario-header">
+          <div class="sc-title">어떤 이야기를 시작할까요?</div>
+          <button class="btn secondary small" onclick="setSoloView('list')">← 모험가 목록으로</button>
+        </div>
+        <div id="scenario-picker-list"></div>
       </div>
 
       <!-- 시나리오 진행 -->
@@ -1154,8 +1163,8 @@
       });
     }
 
-    function loadCharacters(preserveSelection, isPoll) {
-      withHandlers(list => {
+    function loadCharacters(preserveSelection, isPoll, data) {
+      const apply = list => {
         characters = list;
         renderCharList();
         populateCharacterSelect();
@@ -1166,7 +1175,9 @@
           const still = characters.find(c => c.ID === selectedCharId);
           if (still) fillCharForm(still); else newCharacter();
         }
-      }).getCharacters();
+      };
+      if (data) { apply(data); return; }
+      withHandlers(apply).getCharacters();
     }
 
     function populateCharacterSelect() {
@@ -1455,8 +1466,8 @@
         </div>`).join('');
     }
 
-    function loadRollLog() {
-      withHandlers(rows => {
+    function loadRollLog(data) {
+      const apply = rows => {
         lastRollLogRows = rows;
         renderMiniRollList(rows);
         if (!rollHistory.length) {
@@ -1464,7 +1475,9 @@
           renderSparkline(rollHistory);
         }
         renderActivityFeed();
-      }).getRollLog(25);
+      };
+      if (data) { apply(data); return; }
+      withHandlers(apply).getRollLog(25);
     }
 
     // ================= 활동 피드 (세션로그 + 주사위기록 통합) =================
@@ -1535,11 +1548,13 @@
       }).join('');
     }
 
-    function loadLog() {
-      withHandlers(rows => {
+    function loadLog(data) {
+      const apply = rows => {
         lastSessionLogRows = rows;
         renderActivityFeed();
-      }).getSessionLog(50);
+      };
+      if (data) { apply(data); return; }
+      withHandlers(apply).getSessionLog(50);
     }
 
     // ================= GM 도구 =================
@@ -1556,8 +1571,8 @@
       document.getElementById('gm-content').style.display = 'none';
     }
 
-    function loadGameState() {
-      withHandlers(state => {
+    function loadGameState(data) {
+      const apply = state => {
         document.getElementById('gs-scene').value = state['현재씬'] || '';
         document.getElementById('gs-round').value = state['라운드'] || 0;
         document.getElementById('gs-notice').value = state['공지'] || '';
@@ -1565,7 +1580,9 @@
         try { combatants = state['전투순서'] ? JSON.parse(state['전투순서']) : []; } catch (e) { combatants = []; }
         currentTurnId = state['현재턴'] || null;
         renderInitiative();
-      }).getGameState();
+      };
+      if (data) { apply(data); return; }
+      withHandlers(apply).getGameState();
     }
 
     function saveGameState() {
@@ -1691,8 +1708,8 @@
       }
     }
 
-    function loadNpcs(preserveSelection, isPoll) {
-      withHandlers(list => {
+    function loadNpcs(preserveSelection, isPoll, data) {
+      const apply = list => {
         npcs = list;
         renderNpcList();
         populateInitiativeOptions();
@@ -1702,7 +1719,9 @@
           const still = npcs.find(n => n.ID === selectedNpcId);
           if (still) fillNpcForm(still); else newNpc();
         }
-      }).getNPCs();
+      };
+      if (data) { apply(data); return; }
+      withHandlers(apply).getNPCs();
     }
 
     function selectNpc(id) {
@@ -1828,14 +1847,27 @@
     const APPEARANCE_MARK = ['왼쪽 뺨의 흉터', '팔에 새긴 문신', '이색 눈동자', '희끗한 새치', '오래된 목걸이'];
 
     // type: narration(내레이션+선택지) / check(능력 판정 분기) / combat(간이 전투) / ending(결말) / ending_router(조건부 결말 분기)
-    const SOLO_SCENARIO = {
+    // ending_router는 routes 배열을 순서대로 검사해 모든 flags가 true인 첫 규칙을 taken한다.
+    // flags:[] 규칙은 항상 통과하므로 맨 마지막에 두면 기본값(fallback)으로 동작한다.
+    const SOLO_SCENARIOS = [
+    {
       id: 'misty-forest-v1',
       title: '안개 낀 숲',
+      teaser: '실종된 상단을 좇아 안개 낀 숲으로. 고블린과 광신도, 그리고 숲 깊은 곳의 비밀.',
       startNode: 'n1_start',
       nodes: {
         n1_start: {
           type: 'narration', title: '숲의 초입',
           text: '해가 저물기 시작할 무렵, 당신은 안개가 낮게 깔린 숲 앞에 선다. 사흘 전 이 길을 지난 상단이 아직 마을에 도착하지 않았다는 소문을 듣고 나선 참이다. 나무 사이로 희미한 빛이 일렁이는 것이 보인다.',
+          choices: [
+            { label: '숲 가장자리를 따라 조용히 정찰한다', next: 'n2_scout_check' },
+            { label: '망설임 없이 곧장 숲 안으로 들어간다', next: 'n2_direct' },
+            { label: '먼저 마을 사냥꾼에게 조언을 구한다', next: 'n1b_advice' }
+          ]
+        },
+        n1b_advice: {
+          type: 'narration', title: '사냥꾼의 조언',
+          text: '마을 어귀에서 만난 늙은 사냥꾼이 숲에 대해 몇 마디 일러준다. "안개가 짙어지면 방향을 잃기 쉬우니 조심하게." 그가 낡은 물약 하나를 손에 쥐여준다.',
           choices: [
             { label: '숲 가장자리를 따라 조용히 정찰한다', next: 'n2_scout_check' },
             { label: '망설임 없이 곧장 숲 안으로 들어간다', next: 'n2_direct' }
@@ -1857,7 +1889,23 @@
         n3_ambush_avoided: {
           type: 'narration', title: '매복을 피하다',
           text: '당신은 고블린들이 눈치채기 전에 조용히 그들을 지나쳐, 숲 더 깊은 곳으로 이어지는 오솔길을 찾아낸다.',
-          choices: [ { label: '오솔길을 따라 계속 나아간다', next: 'n4_path' } ]
+          choices: [ { label: '오솔길을 따라 계속 나아간다', next: 'n3b_campfire' } ]
+        },
+        n3b_campfire: {
+          type: 'narration', title: '식은 야영지',
+          text: '오솔길 옆, 고블린들이 남기고 간 듯한 작은 야영지 흔적이 눈에 띈다. 아직 잔불이 남아 있다.',
+          choices: [
+            { label: '짐 꾸러미를 조사한다', next: 'n3c_campfire_check' },
+            { label: '그냥 지나친다', next: 'n4_path' }
+          ]
+        },
+        n3c_campfire_check: {
+          type: 'check', title: '야영지 조사',
+          text: '남겨진 짐 꾸러미를 조심스럽게 뒤진다.',
+          ability: 'INT', dc: 11,
+          successText: '낡은 가죽 주머니 속에서 쓸만한 마법 재료 몇 가지를 발견해 챙긴다.',
+          failText: '서둘러 뒤지다 별다른 소득 없이 시간만 흘려보낸다.',
+          successNext: 'n4_path', successFlag: 'found_component', failNext: 'n4_path'
         },
         n_combat_goblin: {
           type: 'combat', title: '고블린 정찰병',
@@ -1880,13 +1928,13 @@
           ability: 'WIS', dc: 13,
           successText: '빛의 유혹을 뿌리치고 무사히 다리를 건넌다. 다리 난간에 누군가 떨어뜨린 낡은 랜턴이 걸려 있다. 챙겨 넣는다.',
           failText: '홀린 듯 길을 벗어나 발밑의 늪에 빠진다. 진흙을 헤치고 나오느라 온몸에 상처가 남는다.',
-          successNext: 'n7_grove', successFlag: 'lantern', failNext: 'n6_bridge_bog'
+          successNext: 'n7_grove_approach', successFlag: 'lantern', failNext: 'n6_bridge_bog'
         },
         n6_bridge_bog: {
           type: 'narration', title: '늪에서 빠져나오다',
           text: '가까스로 늪에서 몸을 빼내지만, 날카로운 것에 긁힌 상처에서 피가 배어 나온다.',
           damage: '1d6',
-          choices: [ { label: '숨을 고르고 계속 나아간다', next: 'n7_grove' } ]
+          choices: [ { label: '숨을 고르고 계속 나아간다', next: 'n7_grove_approach' } ]
         },
         n5_tunnel_check: {
           type: 'check', title: '좁은 굴',
@@ -1894,13 +1942,35 @@
           ability: 'STR', dc: 11,
           successText: '몸을 낮춰 매끄럽게 굴을 통과한다.',
           failText: '중간에 몸이 끼어 한참을 버둥거린 끝에 간신히 빠져나온다. 나뭇가지에 긁혀 상처를 입었다.',
-          successNext: 'n7_grove', failNext: 'n6_tunnel_stuck'
+          successNext: 'n7_grove_approach', failNext: 'n6_tunnel_stuck'
         },
         n6_tunnel_stuck: {
           type: 'narration', title: '가까스로 빠져나오다',
           text: '옷이 찢기고 살갗이 긁힌 채로 굴 반대편에 널브러진다.',
           damage: '1d4',
-          choices: [ { label: '몸을 추스르고 계속 나아간다', next: 'n7_grove' } ]
+          choices: [ { label: '몸을 추스르고 계속 나아간다', next: 'n7_grove_approach' } ]
+        },
+        n7_grove_approach: {
+          type: 'narration', title: '공터 가까이',
+          text: '공터가 가까워질수록 낮은 목소리와 흐릿한 빛이 나무 사이로 새어 나온다. 그때, 근처 덤불에서 부스럭거리는 기척이 느껴진다.',
+          choices: [
+            { label: '기척의 정체를 조용히 확인한다', next: 'n7b_wolf_check' },
+            { label: '무시하고 곧장 나아간다', next: 'n7_grove' }
+          ]
+        },
+        n7b_wolf_check: {
+          type: 'check', title: '수풀 속의 기척',
+          text: '숨을 죽이고 덤불 쪽을 살핀다.',
+          ability: 'WIS', dc: 12,
+          successText: '굶주린 늑대 한 마리가 웅크리고 있는 것을 발견하고, 들키지 않게 조용히 우회한다.',
+          failText: '늑대가 먼저 당신의 냄새를 맡고 으르렁거리며 뛰쳐나온다.',
+          successNext: 'n7_grove', failNext: 'n_combat_wolf'
+        },
+        n_combat_wolf: {
+          type: 'combat', title: '굶주린 늑대',
+          text: '수풀을 헤치고 늑대가 튀어나와 이빨을 드러낸다.',
+          enemy: { name: '굶주린 늑대', maxHp: 9, ac: 12, atkBonus: 3, dmgDice: '1d6+1' },
+          winNext: 'n7_grove', winFlag: 'wolf_defeated', loseNext: 'n_end_defeat'
         },
         n7_grove: {
           type: 'narration', title: '달빛 아래 공터',
@@ -1932,7 +2002,24 @@
           text: '후드를 쓴 광신도가 당신을 향해 지팡이 끝의 불꽃을 겨눈다.',
           surpriseTextFlag: 'player_ambush_cultist', surpriseText: '상대가 반응하기도 전에 당신의 일격이 먼저 꽂힌다.',
           enemy: { name: '의식을 치르던 자', maxHp: 11, ac: 12, atkBonus: 3, dmgDice: '1d6+1' },
-          winNext: 'n10_freed', winFlag: 'merchant_saved', loseNext: 'n_end_defeat'
+          winNext: 'n9_aftermath', winFlag: 'merchant_saved', loseNext: 'n_end_defeat'
+        },
+        n9_aftermath: {
+          type: 'narration', title: '광신도가 쓰러진 뒤',
+          text: '광신도가 쓰러지자 주위가 조용해진다. 그의 품에서 낡은 가죽 일지 한 권이 삐져나와 있는 것이 보인다.',
+          choices: [
+            { label: '일지를 챙겨 살펴본다', next: 'n9b_journal_check' },
+            { label: '상인부터 살핀다', next: 'n10_freed' }
+          ]
+        },
+        n9b_journal_check: {
+          type: 'check', title: '일지 해독',
+          text: '낯선 문자로 가득한 일지를 살펴본다.',
+          ability: 'INT', dc: 12,
+          successText: '암호 같은 문양들을 어렵사리 해독해, 의식의 배후가 숲 깊은 곳 "검은 사당"과 관련되어 있다는 단서를 얻는다.',
+          failText: '내용을 해독하지 못하지만, 혹시 몰라 일지를 챙겨 넣는다.',
+          successNext: 'n10_freed', successFlag: 'journal_decoded',
+          failNext: 'n10_freed', failFlag: 'journal_found'
         },
         n10_freed: {
           type: 'narration', title: '풀려난 상인',
@@ -1947,7 +2034,14 @@
           text: '니콜을 숲 밖 오솔길로 이끈 뒤, 홀로 발길을 돌려 안개가 가장 짙은 방향으로 향한다.',
           choices: [ { label: '어둠 속으로 걸어 들어간다', next: 'n_end_branch' } ]
         },
-        n_end_branch: { type: 'ending_router' },
+        n_end_branch: {
+          type: 'ending_router',
+          routes: [
+            { flags: ['lantern', 'merchant_saved', 'journal_decoded'], next: 'n_end_legend' },
+            { flags: ['lantern', 'merchant_saved'], next: 'n_end_hero' },
+            { flags: [], next: 'n_end_risky' }
+          ]
+        },
         n_end_safe: {
           type: 'ending', outcome: 'good', title: '무사 귀환',
           text: '니콜을 마을까지 무사히 데려다준다. 상단이 있는 곳까지 다 밝혀내지는 못했지만, 적어도 한 사람의 목숨은 구했다. 여관에 돌아와 언 몸을 녹이며, 다음에는 더 깊은 곳까지 가보리라 다짐한다.'
@@ -1955,6 +2049,10 @@
         n_end_hero: {
           type: 'ending', outcome: 'best', title: '숲의 진실을 밝히다',
           text: '랜턴 불빛에 의지해 안개 속을 헤치자, 버려진 사당과 그 아래 도사린 의식의 흔적이 드러난다. 당신은 실종된 상단의 물건들과 의식의 배후를 알려줄 증거를 손에 넣는다. 마을로 돌아온 당신을 사람들은 숲의 진실을 밝혀낸 자로 기억할 것이다.'
+        },
+        n_end_legend: {
+          type: 'ending', outcome: 'best', title: '전설이 된 자',
+          text: '랜턴 불빛과 해독한 일지의 단서를 따라 안개 속 깊은 곳, 버려진 "검은 사당"까지 다다른다. 의식의 전모와 실종된 상단의 흔적을 모두 밝혀낸 당신의 이야기는 이후 몇 년이고 여관에서 회자된다.'
         },
         n_end_risky: {
           type: 'ending', outcome: 'ambiguous', title: '안개 속으로',
@@ -1965,7 +2063,176 @@
           text: '눈앞이 흐려지고 다리에 힘이 풀린다. 의식을 잃기 직전, 멀리서 발소리가 다가오는 것을 느낀다... 다행히 지나가던 사냥꾼에게 발견되어 목숨은 건졌지만, 이번 탐색은 여기서 끝이다.'
         }
       }
-    };
+    },
+    {
+      id: 'shadow-harbor-v1',
+      title: '안개 항구의 실종자들',
+      teaser: '항구 마을에서 하나둘 사라지는 사람들. 부둣가 창고에 얽힌 어두운 진실을 쫓는 이야기.',
+      startNode: 'h1_start',
+      nodes: {
+        h1_start: {
+          type: 'narration', title: '안개 항구에 도착하다',
+          text: '당신은 최근 몇 주 사이 세 명이 흔적도 없이 사라진 항구 마을 "안개 항구"에 도착한다. 부둣가 선술집 "녹슨 닻"에서 정보를 모을 수 있을 것 같다.',
+          choices: [
+            { label: '선술집에서 술꾼들에게 캐묻는다', next: 'h2_tavern_check' },
+            { label: '먼저 부두를 직접 둘러본다', next: 'h2_docks' }
+          ]
+        },
+        h2_tavern_check: {
+          type: 'check', title: '선술집의 소문',
+          text: '술에 취한 뱃사람들 사이에서 슬쩍 말을 붙여본다.',
+          ability: 'CHA', dc: 12,
+          successText: '한 늙은 어부가 목소리를 낮추고 말한다. "한밤중에 부두 창고 쪽에서 이상한 종소리가 들려."',
+          failText: '다들 취해 헛소리만 늘어놓을 뿐, 쓸만한 정보는 얻지 못한다.',
+          successNext: 'h3_lead', successFlag: 'tip_warehouse', failNext: 'h3_lead'
+        },
+        h2_docks: {
+          type: 'narration', title: '부두의 흔적',
+          text: '부두를 살피던 중, 정박된 배 그림자 아래 마른 핏자국 같은 흔적을 발견한다.',
+          choices: [
+            { label: '흔적을 따라가 본다', next: 'h2b_track_check' },
+            { label: '선술집으로 가서 물어본다', next: 'h2_tavern_check' }
+          ]
+        },
+        h2b_track_check: {
+          type: 'check', title: '흔적 추적',
+          text: '희미한 흔적을 따라 조심스레 걸음을 옮긴다.',
+          ability: 'DEX', dc: 12,
+          successText: '흔적을 따라가다 버려진 것처럼 보이는 창고의 뒷문을 발견한다.',
+          failText: '흔적이 빗물에 지워져 더는 따라갈 수 없다.',
+          successNext: 'h3_lead', successFlag: 'found_backdoor', failNext: 'h3_lead'
+        },
+        h3_lead: {
+          type: 'narration', title: '밤이 깊어지고',
+          text: '밤이 깊어질 무렵, 창고 쪽에서 정말로 낮은 종소리가 울려 퍼진다.',
+          choices: [
+            { label: '정문으로 당당히 들어간다', next: 'h4_confront' },
+            { label: '그늘을 통해 몰래 접근한다', next: 'h4_sneak_check' }
+          ]
+        },
+        h4_sneak_check: {
+          type: 'check', title: '은밀한 접근',
+          text: '그림자를 따라 창고 벽을 타고 접근한다.',
+          ability: 'DEX', dc: 13,
+          successText: '들키지 않고 창고 안이 내려다보이는 서까래 위까지 숨어든다.',
+          failText: '삐걱거리는 나무판을 밟아 소리가 울리고, 안에서 발소리가 몰려온다.',
+          successNext: 'h5_warehouse', successFlag: 'scouted_warehouse', failNext: 'h_combat_smuggler'
+        },
+        h4_confront: {
+          type: 'narration', title: '문을 박차고',
+          text: '문을 박차고 들어서자 안에 있던 자들이 화들짝 놀라 무기를 집어든다.',
+          choices: [ { label: '무기를 꺼내 든다', next: 'h_combat_smuggler' } ]
+        },
+        h_combat_smuggler: {
+          type: 'combat', title: '창고를 지키던 밀수단원',
+          text: '거친 인상의 밀수단원이 짧은 검을 뽑아 든다.',
+          enemy: { name: '밀수단원', maxHp: 10, ac: 12, atkBonus: 3, dmgDice: '1d6+1' },
+          winNext: 'h5_warehouse', winFlag: 'smuggler_defeated', loseNext: 'h_end_defeat'
+        },
+        h5_warehouse: {
+          type: 'narration', title: '창고 안쪽',
+          text: '나무 상자들 사이로, 사람 형체의 그림자가 우리 안에 웅크리고 있다. 그 옆에는 낯선 문양이 새겨진 종이 매달려 있다.',
+          choices: [
+            { label: '갇힌 사람부터 풀어준다', next: 'h6_free_check' },
+            { label: '종부터 살펴본다', next: 'h6_bell_check' }
+          ]
+        },
+        h6_free_check: {
+          type: 'check', title: '자물쇠 뜯어내기',
+          text: '녹슨 자물쇠를 힘으로 뜯어내려 한다.',
+          ability: 'STR', dc: 11,
+          successText: '자물쇠를 뜯어내 갇혀 있던 이를 구해낸다. 그가 떨리는 목소리로 고마움을 전한다.',
+          failText: '자물쇠가 꿈쩍도 하지 않는다. 다른 방법이 필요할 것 같다.',
+          successNext: 'h7_captive_talk', successFlag: 'captive_freed', failNext: 'h6_bell_check'
+        },
+        h6_bell_check: {
+          type: 'check', title: '수상한 종',
+          text: '문양이 새겨진 종을 조심스레 살핀다.',
+          ability: 'INT', dc: 12,
+          successText: '종의 문양을 살피다, 이게 누군가를 부르는 신호 장치라는 걸 알아채고 조용히 떼어낸다.',
+          failText: '무심코 종을 건드려 크게 울리고 만다. 발소리가 몰려온다.',
+          successNext: 'h7_captive_talk', successFlag: 'bell_disabled', failNext: 'h_combat_cult_leader'
+        },
+        h7_captive_talk: {
+          type: 'narration', title: '갇혀 있던 이의 증언',
+          text: '우리 안에 있던 이가 겁에 질린 목소리로 말한다. "저 사람들, 사람을 산 채로 바다 밑 무언가에게 바치려 해요..."',
+          choices: [
+            { label: '그를 데리고 즉시 빠져나간다', next: 'h_end_safe' },
+            { label: '배후를 캐기 위해 더 안쪽으로 들어간다', next: 'h8_deeper' }
+          ]
+        },
+        h8_deeper: {
+          type: 'narration', title: '지하로 이어지는 계단',
+          text: '창고 안쪽 계단이 지하로 이어진다. 짠내와 함께 낮은 성가가 울려 퍼진다.',
+          choices: [
+            { label: '조용히 계단을 내려간다', next: 'h8b_sneak_check' },
+            { label: '곧장 내려간다', next: 'h_combat_cult_leader' }
+          ]
+        },
+        h8b_sneak_check: {
+          type: 'check', title: '계단 아래로',
+          text: '발소리를 죽이고 계단을 내려가 상황을 먼저 살핀다.',
+          ability: 'DEX', dc: 14,
+          successText: '들키지 않고 계단 아래까지 내려가 사제의 등 뒤에 선다.',
+          failText: '계단이 삐걱대며 존재를 들키고 만다.',
+          successNext: 'h_combat_cult_leader', successFlag: 'player_ambush_leader', failNext: 'h_combat_cult_leader'
+        },
+        h_combat_cult_leader: {
+          type: 'combat', title: '심연을 섬기는 사제',
+          text: '제단 앞에 선 사제가 지팡이를 들어 올리며 몸을 돌린다.',
+          surpriseTextFlag: 'player_ambush_leader', surpriseText: '방심한 사제를 향해 먼저 일격을 꽂아 넣는다.',
+          enemy: { name: '심연을 섬기는 사제', maxHp: 13, ac: 13, atkBonus: 4, dmgDice: '1d8+1' },
+          winNext: 'h9_altar', winFlag: 'leader_defeated', loseNext: 'h_end_defeat'
+        },
+        h9_altar: {
+          type: 'narration', title: '지하 제단',
+          text: '지하 제단 위, 검은 진주처럼 빛나는 무언가가 놓여 있다. 사라진 이들의 유품도 함께 흩어져 있다.',
+          choices: [
+            { label: '진주를 그 자리에서 파괴한다', next: 'h_end_router' },
+            { label: '진주를 조심스레 챙긴다', next: 'h9b_take_check' }
+          ]
+        },
+        h9b_take_check: {
+          type: 'check', title: '검은 진주',
+          text: '진주를 집어 들려 한다. 손끝에서부터 낯선 속삭임이 스며든다.',
+          ability: 'WIS', dc: 13,
+          successText: '속삭임을 애써 무시하며 진주를 안전하게 챙긴다.',
+          failText: '진주를 집어드는 순간 정신이 아득해진다. 황급히 손을 뗀다.',
+          successNext: 'h_end_router', successFlag: 'pearl_taken', failNext: 'h_end_router'
+        },
+        h_end_router: {
+          type: 'ending_router',
+          routes: [
+            { flags: ['captive_freed', 'leader_defeated', 'pearl_taken'], next: 'h_end_best' },
+            { flags: ['captive_freed', 'leader_defeated'], next: 'h_end_good' },
+            { flags: ['leader_defeated'], next: 'h_end_ambiguous' },
+            { flags: [], next: 'h_end_ambiguous' }
+          ]
+        },
+        h_end_safe: {
+          type: 'ending', outcome: 'good', title: '조용한 귀환',
+          text: '구조한 이를 데리고 즉시 항구를 빠져나와 마을 관리에게 알린다. 배후까지 밝혀내지는 못했지만, 적어도 한 사람의 목숨은 구했다.'
+        },
+        h_end_best: {
+          type: 'ending', outcome: 'best', title: '항구의 그림자를 걷어내다',
+          text: '갇혀 있던 이를 구하고, 사제를 쓰러뜨리고, 위험한 진주까지 안전하게 회수한다. 실종의 배후가 만천하에 드러나고, 안개 항구는 오랜만에 평온한 밤을 되찾는다.'
+        },
+        h_end_good: {
+          type: 'ending', outcome: 'good', title: '실종자를 구하다',
+          text: '갇혀 있던 이를 구하고 사제까지 쓰러뜨린다. 진주는 손대지 않고 봉인해 관리에게 넘긴다. 완전한 승리는 아니지만, 항구는 다시 안전해졌다.'
+        },
+        h_end_ambiguous: {
+          type: 'ending', outcome: 'ambiguous', title: '드러나지 않은 진실',
+          text: '사제는 쓰러뜨렸지만, 정작 갇혀 있던 이를 구하지 못한 채 지하를 떠난다. 사건의 전모는 여전히 안개에 싸여 있고, 마음 한구석이 무겁다.'
+        },
+        h_end_defeat: {
+          type: 'ending', outcome: 'bad', title: '어둠에 삼켜지다',
+          text: '눈앞이 흐려지고 다리에 힘이 풀린다. 의식을 잃기 직전, 저 멀리서 다급한 발소리가 다가오는 것을 느낀다... 다행히 순찰대에게 발견되어 목숨은 건졌지만, 이번 탐색은 여기서 끝이다.'
+        }
+      }
+    }
+    ];
+    function findScenario(id) { return SOLO_SCENARIOS.find(s => s.id === id) || SOLO_SCENARIOS[0]; }
     const ENDING_LABEL = { good: '좋은 결말', best: '최고의 결말', ambiguous: '여운이 남는 결말', bad: '패배' };
 
     function abilityMod(score) { return Math.floor((Number(score) - 10) / 2); }
@@ -2248,17 +2515,39 @@
       withHandlers(list => { soloCharacters = list; renderSoloCharList(); cb(); }).getSoloCharacters();
     }
 
+    // ---------------- 시나리오 선택 ----------------
+    // 이전 진행상태(scenarioId 없음)와의 하위 호환을 위해, 저장된 값이 없으면 첫 번째
+    // 시나리오("안개 낀 숲")를 기본값으로 취급한다.
+    let pendingSoloChar = null;
+    function showScenarioPicker(charId, char) {
+      pendingSoloChar = { charId: charId, char: char };
+      const el = document.getElementById('scenario-picker-list');
+      el.innerHTML = SOLO_SCENARIOS.map(s => `<div class="card scenario-pick-card">
+        <div class="sc-node-title">${escapeHtml(s.title)}</div>
+        <div class="sc-node-text">${escapeHtml(s.teaser || '')}</div>
+        <button class="btn" onclick="chooseScenario('${s.id}')">이 이야기 시작</button>
+      </div>`).join('');
+      setSoloView('picker');
+    }
+    function chooseScenario(scenarioId) {
+      if (!pendingSoloChar) return;
+      beginSoloPlaySession(pendingSoloChar.charId, pendingSoloChar.char, null, scenarioId);
+      pendingSoloChar = null;
+    }
+
     // ---------------- 시나리오 진행 엔진 ----------------
-    function beginSoloPlaySession(charId, char, restored) {
+    function beginSoloPlaySession(charId, char, restored, chosenScenarioId) {
       // 복원된 진행상태가 있으면 이어서, 없으면 처음부터. lastLoggedNode를 복원된 마지막 노드로
       // 맞춰두어야 재진입 시 같은 장면 제목이 이야기 기록에 중복으로 쌓이지 않는다.
+      const scenarioId = restored ? (restored.scenarioId || SOLO_SCENARIOS[0].id) : chosenScenarioId;
+      const scenario = findScenario(scenarioId);
       soloPlay = restored && restored.node ? {
-        charId: charId, char: char, node: restored.node, flags: restored.flags || {}, log: restored.log || [],
+        charId: charId, char: char, scenarioId: scenarioId, node: restored.node, flags: restored.flags || {}, log: restored.log || [],
         combat: restored.combat || null, lastLoggedNode: restored.node
       } : {
-        charId: charId, char: char, node: SOLO_SCENARIO.startNode, flags: {}, log: [], combat: null, lastLoggedNode: null
+        charId: charId, char: char, scenarioId: scenarioId, node: scenario.startNode, flags: {}, log: [], combat: null, lastLoggedNode: null
       };
-      document.getElementById('sc-char-title').textContent = char['캐릭터명'] + ' · ' + SOLO_SCENARIO.title;
+      document.getElementById('sc-char-title').textContent = char['캐릭터명'] + ' · ' + scenario.title;
       setSoloView('play');
       renderStoryLogList();
       renderScenarioNode();
@@ -2270,12 +2559,13 @@
       withHandlers(progressJson => {
         let restored = null;
         if (progressJson) { try { restored = JSON.parse(progressJson); } catch (e) { restored = null; } }
-        beginSoloPlaySession(charId, char, restored);
-      }, () => beginSoloPlaySession(charId, char, null)).getSoloProgress(charId);
+        if (restored && restored.node) beginSoloPlaySession(charId, char, restored);
+        else showScenarioPicker(charId, char);
+      }, () => showScenarioPicker(charId, char)).getSoloProgress(charId);
     }
 
     function persistSoloProgress() {
-      const json = JSON.stringify({ node: soloPlay.node, flags: soloPlay.flags, log: soloPlay.log, combat: soloPlay.combat });
+      const json = JSON.stringify({ scenarioId: soloPlay.scenarioId, node: soloPlay.node, flags: soloPlay.flags, log: soloPlay.log, combat: soloPlay.combat });
       withHandlers(() => {}).setSoloProgress(soloPlay.charId, json);
     }
 
@@ -2301,14 +2591,16 @@
       document.getElementById('story-log-list').classList.toggle('open');
     }
 
-    function currentSoloNode() { return SOLO_SCENARIO.nodes[soloPlay.node]; }
+    function currentSoloNode() { return findScenario(soloPlay.scenarioId).nodes[soloPlay.node]; }
 
     function renderScenarioNode() {
       const node = currentSoloNode();
       if (!node) return;
       if (node.type === 'ending_router') {
-        const target = (soloPlay.flags.lantern && soloPlay.flags.merchant_saved) ? 'n_end_hero' : 'n_end_risky';
-        soloPlay.node = target;
+        // routes를 순서대로 검사해 모든 flags가 true인 첫 규칙을 채택한다. flags:[]는
+        // every()가 빈 배열에서 항상 true이므로 목록 맨 끝에 두면 기본값(fallback)으로 동작한다.
+        const match = (node.routes || []).find(r => (r.flags || []).every(f => soloPlay.flags[f]));
+        soloPlay.node = match ? match.next : node.fallback;
         persistSoloProgress();
         renderScenarioNode();
         return;
@@ -2512,12 +2804,17 @@
         <div class="sc-node-text">${escapeHtml(node.text)}</div>
         <div class="scenario-choices">
           <button class="btn" onclick="restartSoloScenario()">다시 도전하기</button>
+          <button class="btn secondary" onclick="pickDifferentScenario()">다른 이야기 선택하기</button>
           <button class="btn secondary" onclick="exitSoloPlay()">모험가 목록으로</button>
         </div>`;
     }
 
+    function pickDifferentScenario() {
+      showScenarioPicker(soloPlay.charId, soloPlay.char);
+    }
+
     function restartSoloScenario() {
-      soloPlay.node = SOLO_SCENARIO.startNode;
+      soloPlay.node = findScenario(soloPlay.scenarioId).startNode;
       soloPlay.flags = {};
       soloPlay.log = [];
       soloPlay.combat = null;
@@ -2553,17 +2850,31 @@
       }
       // 탭이 백그라운드(다른 탭/창에 가려짐)일 때는 자동 새로고침을 쉬어 불필요한 서버 호출/부하를 줄인다.
       // 탭이 다시 보이는 순간 한 번 즉시 갱신해 놓치는 데이터 없이 최신 상태로 맞춘다.
-      setInterval(() => { if (!document.hidden) loadRollLog(); }, 6000);
-      setInterval(() => { if (!document.hidden) loadLog(); }, 8000);
-      setInterval(() => { if (!document.hidden) loadCharacters(true, true); }, 12000);
-      setInterval(() => { if (!document.hidden && localStorage.getItem('trpg_gm_mode') === '1') { loadNpcs(true, true); loadGameState(); } }, 12000);
+      setInterval(() => { if (!document.hidden) pollSnapshot(); }, 10000);
       document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) {
-          loadRollLog();
-          loadLog();
-          if (localStorage.getItem('trpg_gm_mode') === '1') { loadNpcs(true, true); loadGameState(); }
-        }
+        if (!document.hidden) pollSnapshot(true);
       });
+    }
+
+    // 예전에는 캐릭터/주사위기록/세션로그/[GM모드면]NPC+게임상태를 각각 다른 간격의
+    // setInterval로 따로 폴링했는데, Apps Script 호출 하나하나에 고정 지연이 있어서
+    // 이게 겹쳐 돌 때마다 체감 렉이 쌓였다. getFeedSnapshot 하나로 묶어 왕복 횟수를
+    // 1/4로 줄이고, 데이터가 실제로 안 바뀌었으면 재렌더까지 건너뛴다.
+    let lastSnapshotJson = null;
+    function pollSnapshot(force) {
+      const gmMode = localStorage.getItem('trpg_gm_mode') === '1';
+      withHandlers(snapshot => {
+        const snapJson = JSON.stringify(snapshot);
+        if (!force && snapJson === lastSnapshotJson) return;
+        lastSnapshotJson = snapJson;
+        loadCharacters(true, true, snapshot.characters);
+        loadRollLog(snapshot.rollLog);
+        loadLog(snapshot.sessionLog);
+        if (gmMode) {
+          loadNpcs(true, true, snapshot.npcs);
+          loadGameState(snapshot.gameState);
+        }
+      }).getFeedSnapshot(gmMode);
     }
     init();
   </script>
