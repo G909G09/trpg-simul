@@ -1,0 +1,2541 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <link rel="stylesheet" as="style" crossorigin
+    href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <link rel="stylesheet"
+    href="https://cdn.jsdelivr.net/gh/fonts-archive/Cafe24Ssurround/Cafe24Ssurround.css" />
+  <style>
+    :root {
+      /* validated dark palette (dataviz skill reference) */
+      --page:        #0d0d0d;
+      --surface-1:   #1a1a19;
+      --surface-2:   #232322;
+      --surface-3:   #2b2b29;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --gridline:    #2c2c2a;
+      --border:      rgba(255,255,255,0.10);
+      --border-strong: rgba(255,255,255,0.18);
+
+      --cat-1: #3987e5; /* blue     */
+      --cat-2: #d95926; /* orange   */
+      --cat-3: #199e70; /* aqua     */
+      --cat-4: #c98500; /* yellow   */
+      --cat-5: #d55181; /* magenta  */
+      --cat-6: #008300; /* green    */
+      --cat-7: #9085e9; /* violet   */
+      --cat-8: #e66767; /* red      */
+
+      --status-good: #0ca30c;
+      --status-warning: #fab219;
+      --status-serious: #ec835a;
+      --status-critical: #d03b3b;
+
+      /* 프리텐다드(본문) + 카페24 써라운드(제목/강조, 뒤틀림체 대체 — 공개 CDN 배포가 없어 라이선스 확인 없이 임베드 불가) */
+      --font-base: 'Pretendard', system-ui, -apple-system, "Segoe UI", "Malgun Gothic", Roboto, sans-serif;
+      --font-display: 'Cafe24 Ssurround', 'Pretendard', system-ui, sans-serif;
+
+      --radius: 20px;
+      --radius-sm: 14px;
+      --radius-lg: 26px;
+      --bottom-nav-h: 62px;
+
+      /* ---- 애플 글라스(Liquid Glass) 톤 ---- */
+      --glass-bg: rgba(30,30,29,0.48);
+      --glass-bg-strong: rgba(30,30,29,0.62);
+      --glass-border: rgba(255,255,255,0.18);
+      --glass-highlight: rgba(255,255,255,0.11);
+      --glass-blur: blur(26px) saturate(190%);
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: var(--page);
+      color: var(--text-primary);
+      font-family: var(--font-base);
+      font-size: 14px;
+      -webkit-font-smoothing: antialiased;
+      position: relative;
+    }
+    svg.icon { display: inline-block; vertical-align: -3px; flex: none; }
+
+    /* ---------- 배경의 은은한 컬러 블롭 (글라스가 비출 대상) ---------- */
+    .bg-blobs { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+    .bg-blobs span {
+      position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.5;
+      animation: blobDrift 22s ease-in-out infinite alternate;
+    }
+    .bg-blobs span:nth-child(1) { width: 560px; height: 560px; left: -140px; top: -140px; background: var(--cat-1); }
+    .bg-blobs span:nth-child(2) { width: 500px; height: 500px; right: -120px; top: 4%; background: var(--cat-7); animation-delay: -6s; animation-duration: 26s; }
+    .bg-blobs span:nth-child(3) { width: 460px; height: 460px; left: 18%; bottom: -200px; background: var(--cat-3); animation-delay: -12s; animation-duration: 30s; }
+    .bg-blobs span:nth-child(4) { width: 420px; height: 420px; left: 40%; top: 30%; background: var(--cat-5); opacity: 0.32; animation-delay: -18s; animation-duration: 34s; }
+    @keyframes blobDrift { from { transform: translate(0, 0) scale(1); } to { transform: translate(40px, -30px) scale(1.12); } }
+    header, main, .fab, .drawer, .drawer-backdrop, .bottom-nav, .toast { position: relative; z-index: 1; }
+
+    /* ---------- header / tabs ---------- */
+    header {
+      padding: 18px 20px 0;
+      border-bottom: 1px solid var(--glass-border);
+      background: var(--glass-bg-strong);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      position: sticky; top: 0; z-index: 20;
+    }
+    header h1 {
+      margin: 0 0 14px;
+      font-family: var(--font-display);
+      font-size: 21px;
+      letter-spacing: 0.2px;
+      color: var(--text-primary);
+      font-weight: 700;
+      display: flex; align-items: center; gap: 8px;
+    }
+    header h1 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cat-1); box-shadow: 0 0 8px var(--cat-1); }
+    nav.tabs {
+      display: flex;
+      gap: 4px;
+      overflow-x: auto;
+      position: relative;
+    }
+    nav.tabs button {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      padding: 10px 16px;
+      font-size: 13.5px;
+      cursor: pointer;
+      white-space: nowrap;
+      position: relative;
+      transition: color 0.15s ease;
+      font-family: var(--font-display);
+      font-weight: 600;
+      display: flex; align-items: center; gap: 6px;
+    }
+    nav.tabs button:hover { color: var(--text-secondary); }
+    nav.tabs button.active { color: var(--text-primary); font-weight: 600; }
+    nav.tabs button .feed-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--cat-7); display: none; }
+    nav.tabs button .feed-dot.show { display: inline-block; }
+    .tab-indicator {
+      position: absolute; bottom: 0; height: 2px; background: var(--cat-1);
+      border-radius: 2px; transition: left 0.25s cubic-bezier(.4,0,.2,1), width 0.25s cubic-bezier(.4,0,.2,1);
+      box-shadow: 0 0 6px rgba(57,135,229,0.7);
+    }
+
+    main { padding: 16px; padding-bottom: 100px; max-width: 1020px; margin: 0 auto; }
+    .panel { display: none; animation: fadeInUp 0.22s ease; }
+    .panel.active { display: block; }
+    .grid { display: grid; grid-template-columns: 300px 1fr; gap: 14px; align-items: start; }
+
+    .card {
+      background: var(--glass-bg);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 14px;
+      transition: border-color 0.15s ease, transform 0.15s ease;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.28), inset 0 1px 0 var(--glass-highlight);
+    }
+    .card::before {
+      content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+      background: linear-gradient(160deg, rgba(255,255,255,0.10), rgba(255,255,255,0) 42%);
+    }
+    .card h3 {
+      margin: 0 0 10px;
+      font-family: var(--font-display);
+      font-size: 12.5px;
+      color: var(--text-muted);
+      letter-spacing: 0.4px;
+      font-weight: 700;
+      position: relative;
+    }
+
+    /* ---------- search ---------- */
+    .search-box { position: relative; margin-bottom: 10px; }
+    .search-box svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+    .search-box input { padding-left: 32px; }
+
+    /* ---------- list items (character / npc) ---------- */
+    .list-scroll { max-height: 62vh; overflow-y: auto; padding-right: 2px; }
+    .list-item {
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      margin-bottom: 8px;
+      cursor: pointer;
+      background: var(--surface-2);
+      display: flex; gap: 10px;
+      transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+      animation: fadeInUp 0.2s ease;
+    }
+    .list-item:hover { transform: translateY(-1px); border-color: var(--border-strong); }
+    .list-item.selected { border-color: var(--cat-1); background: #16233a; box-shadow: 0 0 0 1px rgba(57,135,229,0.35); }
+    .list-item.flash { animation: flashPulse 1s ease; }
+    .avatar {
+      flex: none; width: 38px; height: 38px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-display); font-weight: 700; font-size: 13px; letter-spacing: 0;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.35);
+    }
+    .li-body { flex: 1; min-width: 0; }
+    .li-top { display: flex; align-items: center; gap: 6px; justify-content: space-between; }
+    .li-name { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pill {
+      display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 999px;
+      font-family: var(--font-display); font-size: 10.5px; font-weight: 700; white-space: nowrap; flex: none;
+    }
+    .li-meta { color: var(--text-muted); font-size: 11.5px; margin-top: 2px; }
+    .hpbar-wrap { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+    .hpbar { flex: 1; height: 7px; border-radius: 4px; overflow: hidden; background: var(--gridline); }
+    .hpbar-fill { height: 100%; border-radius: 4px; transition: width 0.45s cubic-bezier(.4,0,.2,1), background 0.3s ease; }
+    .hp-num { font-size: 10.5px; color: var(--text-muted); flex: none; min-width: 44px; text-align: right; font-variant-numeric: tabular-nums; }
+    .spec-strip { display: flex; gap: 8px; margin-top: 7px; flex-wrap: wrap; }
+    .spec-chip { font-size: 10px; color: var(--text-secondary); background: var(--surface-3); border-radius: 5px; padding: 2px 6px; display: flex; gap: 4px; align-items: center; }
+    .spec-chip b { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+    .spec-chip .mini-bar { width: 22px; height: 4px; border-radius: 2px; background: var(--gridline); overflow: hidden; }
+    .spec-chip .mini-bar i { display: block; height: 100%; background: var(--cat-1); border-radius: 2px; }
+
+    /* ---------- master/detail responsive toggle ---------- */
+    .md-toggle { display: none; gap: 6px; margin-bottom: 10px; }
+    .md-toggle button {
+      flex: 1; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: var(--text-secondary);
+      border-radius: 999px; padding: 8px; font-size: 12.5px; font-weight: 600; font-family: var(--font-display); cursor: pointer;
+    }
+    .md-toggle button.active { background: var(--cat-1); color: #fff; border-color: var(--cat-1); }
+
+    /* ---------- form fields ---------- */
+    label { display: block; font-size: 11.5px; color: var(--text-muted); margin: 10px 0 4px; font-weight: 600; letter-spacing: 0.2px; }
+    input[type=text], input[type=number], textarea, select {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      font-size: 13.5px;
+      font-family: inherit;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+    input:focus, textarea:focus, select:focus {
+      outline: none; border-color: var(--cat-1); background: var(--surface-3);
+    }
+    textarea { resize: vertical; min-height: 50px; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+    button.btn {
+      background: linear-gradient(155deg, rgba(87,157,240,0.98), var(--cat-1));
+      color: #ffffff;
+      border: 1px solid rgba(255,255,255,0.22);
+      border-radius: 999px;
+      padding: 9px 18px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 13.5px;
+      font-family: var(--font-display);
+      transition: filter 0.12s ease, transform 0.08s ease;
+      display: inline-flex; align-items: center; gap: 6px;
+      box-shadow: 0 4px 14px rgba(57,135,229,0.35), inset 0 1px 0 rgba(255,255,255,0.35);
+    }
+    button.btn:hover { filter: brightness(1.1); }
+    button.btn:active { transform: scale(0.97); }
+    button.btn.secondary { background: rgba(255,255,255,0.06); border: 1px solid var(--glass-border); color: var(--text-secondary); box-shadow: inset 0 1px 0 var(--glass-highlight); }
+    button.btn.danger { background: rgba(208,59,59,0.10); border: 1px solid rgba(208,59,59,0.5); color: var(--status-critical); box-shadow: none; }
+    button.btn.small { padding: 5px 12px; font-size: 12px; }
+    button.btn:disabled { opacity: 0.5; cursor: default; }
+    .btn-row { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+
+    .stat-row { display: flex; gap: 6px; margin-bottom: 6px; align-items: center; }
+    .stat-row input { flex: 1; }
+    .stat-row input.stat-key { flex: 0 0 90px; }
+
+    /* ---------- character sheet sub-tabs (D&D Beyond style) ---------- */
+    .subtabs { display: flex; gap: 6px; margin-bottom: 12px; border-bottom: 1px solid var(--border); }
+    .subtabs button {
+      background: none; border: none; color: var(--text-muted); padding: 8px 4px; margin-right: 10px;
+      font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: var(--font-display); border-bottom: 2px solid transparent;
+    }
+    .subtabs button.active { color: var(--text-primary); border-bottom-color: var(--cat-1); }
+    .subpanel { display: none; }
+    .subpanel.active { display: block; }
+    .summary-strip { display: flex; gap: 14px; flex-wrap: wrap; padding: 10px 12px; background: var(--surface-2); border-radius: var(--radius-sm); margin-bottom: 12px; }
+    .summary-item { text-align: center; min-width: 46px; }
+    .summary-item .v { font-family: var(--font-display); font-size: 18px; font-weight: 800; }
+    .summary-item .l { font-size: 9.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; margin-top: 1px; }
+
+    /* ---------- dice buttons shared (drawer) ---------- */
+    .dice-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+    .dice-buttons button {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--glass-border);
+      color: var(--text-secondary);
+      border-radius: 999px;
+      padding: 8px 15px;
+      cursor: pointer;
+      font-weight: 700;
+      font-family: var(--font-display);
+      transition: border-color 0.12s ease, color 0.12s ease, transform 0.08s ease;
+    }
+    .dice-buttons button:hover { border-color: var(--cat-1); color: var(--text-primary); transform: translateY(-1px); }
+
+    .roll-stage {
+      display: flex; align-items: center; gap: 18px;
+      padding: 18px; background: var(--surface-2); border-radius: var(--radius); margin: 12px 0;
+      flex-wrap: wrap;
+    }
+    .die-icon { flex: none; width: 56px; height: 56px; }
+    .die-icon.spinning { animation: spin 0.5s linear infinite; }
+    .roll-readout { flex: 1; min-width: 140px; }
+    .roll-readout .total { font-family: var(--font-display); font-size: 44px; font-weight: 800; color: var(--text-primary); line-height: 1; }
+    .roll-readout .total.pop { animation: popIn 0.32s cubic-bezier(.34,1.56,.64,1); }
+    .roll-readout .notation-label { color: var(--text-muted); font-size: 12px; margin-top: 4px; }
+    .roll-readout .badge { display: inline-block; margin-top: 8px; padding: 3px 10px; border-radius: 12px; font-size: 11.5px; font-weight: 700; }
+    .badge.success { background: rgba(12,163,12,0.18); color: var(--status-good); }
+    .badge.fail { background: rgba(208,59,59,0.18); color: var(--status-critical); }
+    .sparkline-wrap { flex: none; text-align: center; }
+    .sparkline-wrap .cap { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
+
+    .term-breakdown { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+    .term-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .term-label { font-size: 11px; color: var(--text-muted); flex: none; min-width: 64px; font-variant-numeric: tabular-nums; }
+    .die-chip {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 26px; height: 26px; padding: 0 4px; border-radius: 6px;
+      font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums;
+      background: var(--cat-1); color: #ffffff; border: 2px solid var(--surface-2);
+    }
+    .die-chip.dropped { background: none; border: 1px dashed var(--border-strong); color: var(--text-muted); text-decoration: line-through; }
+    .die-chip.crit-good { background: var(--status-good); }
+    .die-chip.crit-bad { background: var(--status-critical); }
+    .die-chip.flat { background: var(--surface-3); color: var(--text-secondary); border-color: var(--surface-3); }
+
+    table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    table th, table td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--gridline); }
+    table th { color: var(--text-muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
+    table tbody tr { transition: background 0.15s ease; }
+    table tbody tr:hover { background: var(--surface-2); }
+    td.total-cell { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+    /* ---------- floating dice FAB + drawer (Owlbear-style on-demand overlay) ---------- */
+    .fab {
+      position: fixed; right: 20px; bottom: 20px; width: 58px; height: 58px; border-radius: 50%;
+      background: linear-gradient(155deg, rgba(87,157,240,0.95), rgba(57,135,229,0.82));
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255,255,255,0.38); color: #fff; cursor: pointer; z-index: 50;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 10px 26px rgba(57,135,229,0.45), inset 0 1px 0 rgba(255,255,255,0.4);
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+    .fab:hover { transform: scale(1.07); }
+    .fab.open { background: var(--glass-bg-strong); box-shadow: 0 10px 26px rgba(0,0,0,0.45), inset 0 1px 0 var(--glass-highlight); }
+    .drawer-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.55); opacity: 0; pointer-events: none;
+      transition: opacity 0.2s ease; z-index: 55;
+    }
+    .drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+    .drawer {
+      position: fixed; left: 0; right: 0; bottom: 0; margin: 0 auto; max-width: 640px;
+      background: var(--glass-bg-strong);
+      backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border); border-bottom: none;
+      border-top-left-radius: var(--radius-lg); border-top-right-radius: var(--radius-lg);
+      max-height: 85vh; overflow-y: auto; padding: 10px 18px 22px;
+      transform: translateY(106%); transition: transform 0.28s cubic-bezier(.4,0,.2,1);
+      z-index: 56; box-shadow: 0 -14px 40px rgba(0,0,0,0.5), inset 0 1px 0 var(--glass-highlight);
+    }
+    .drawer.open { transform: translateY(0); }
+    .drawer-handle { width: 38px; height: 4px; background: var(--gridline); border-radius: 2px; margin: 8px auto 12px; }
+    .drawer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .drawer-header h2 { margin: 0; font-family: var(--font-display); font-size: 16.5px; font-weight: 700; }
+    .drawer-close { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px; }
+    .mini-roll-list { margin-top: 4px; }
+    .mini-roll-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--gridline); font-size: 12px; }
+    .mini-roll-row:last-child { border-bottom: none; }
+    .mini-roll-row .who { color: var(--text-secondary); }
+    .mini-roll-row .notation { color: var(--text-muted); font-size: 11px; }
+    .mini-roll-row .total { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .see-all-link { display: block; text-align: center; margin-top: 8px; color: var(--cat-1); font-size: 12px; cursor: pointer; background: none; border: none; font-family: inherit; }
+
+    /* ---------- activity feed (merged log + rolls) ---------- */
+    .filter-row { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+    .filter-chip {
+      border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: var(--text-secondary);
+      border-radius: 999px; padding: 5px 13px; font-size: 12px; cursor: pointer; font-family: var(--font-display); font-weight: 600;
+      display: flex; align-items: center; gap: 6px; transition: all 0.12s ease;
+    }
+    .filter-chip .sw { width: 7px; height: 7px; border-radius: 50%; }
+    .filter-chip.active { border-color: rgba(57,135,229,0.55); background: rgba(57,135,229,0.18); color: var(--text-primary); }
+    .log-item { padding: 10px 4px 10px 12px; border-left: 3px solid var(--gridline); margin-bottom: 8px; background: var(--surface-2); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; animation: slideIn 0.2s ease; }
+    .log-item .top { display: flex; justify-content: space-between; color: var(--text-muted); font-size: 11px; margin-bottom: 4px; gap: 8px; }
+    .log-item .top .who { color: var(--text-secondary); font-weight: 600; }
+    .log-type-badge { border-radius: 999px; padding: 2px 9px; font-family: var(--font-display); font-size: 10.5px; font-weight: 700; flex: none; }
+    .log-item .content { line-height: 1.5; }
+    .log-item.roll-entry .content { display: flex; align-items: center; gap: 10px; }
+    .log-item.roll-entry .roll-total-big { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+    .empty-msg { color: var(--text-muted); text-align: center; padding: 26px 10px; font-size: 13px; }
+    .gm-gate { text-align: center; padding: 46px 20px; }
+    .gm-gate p { color: var(--text-muted); margin-bottom: 16px; }
+    .hp-adjust { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
+
+    /* ============ 솔로 플레이 (발더스 게이트 3 참조 캐릭터 메이킹 + 분기형 GM 시나리오) ============ */
+    .solo-view { display: none; }
+    .solo-view.active { display: block; }
+    .solo-intro-card { text-align: center; padding: 34px 22px; }
+    .solo-intro-card h2 { font-family: var(--font-display); font-size: 19px; margin: 0 0 8px; }
+    .solo-intro-card p { color: var(--text-muted); font-size: 13px; line-height: 1.6; margin: 0 0 18px; max-width: 480px; margin-left: auto; margin-right: auto; }
+
+    .solo-char-card { display: flex; gap: 12px; align-items: center; }
+    .solo-char-card .solo-char-info { flex: 1; min-width: 0; }
+    .solo-char-card .solo-char-tags { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+    .solo-char-actions { display: flex; gap: 6px; flex: none; }
+
+    /* ---- 위저드 단계 표시 ---- */
+    .wizard-steps { display: flex; align-items: center; gap: 4px; margin-bottom: 18px; overflow-x: auto; padding-bottom: 2px; }
+    .wizard-step {
+      display: flex; align-items: center; gap: 6px; flex: none; padding: 6px 12px 6px 8px;
+      border-radius: 999px; background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border);
+      color: var(--text-muted); font-size: 11.5px; font-weight: 600; white-space: nowrap;
+    }
+    .wizard-step .num {
+      width: 18px; height: 18px; border-radius: 50%; background: var(--surface-3); color: var(--text-muted);
+      display: flex; align-items: center; justify-content: center; font-size: 10px; font-family: var(--font-display); flex: none;
+    }
+    .wizard-step.done { color: var(--text-secondary); }
+    .wizard-step.done .num { background: var(--status-good); color: #06210a; }
+    .wizard-step.current { color: var(--text-primary); border-color: var(--cat-1); background: rgba(57,135,229,0.14); }
+    .wizard-step.current .num { background: var(--cat-1); color: #fff; }
+
+    .wizard-step-title { font-family: var(--font-display); font-size: 17px; font-weight: 700; margin: 0 0 4px; }
+    .wizard-step-sub { color: var(--text-muted); font-size: 12.5px; margin: 0 0 16px; }
+
+    /* ---- 선택형 카드 그리드 (종족/클래스/배경) ---- */
+    .option-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+    .option-card {
+      text-align: left; cursor: pointer; padding: 13px 14px; border-radius: var(--radius-sm);
+      border: 1px solid var(--border); background: var(--surface-2); transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+      display: flex; flex-direction: column; gap: 3px;
+    }
+    .option-card:hover { transform: translateY(-2px); border-color: var(--border-strong); }
+    .option-card.selected { border-color: var(--cat-1); background: #16233a; box-shadow: 0 0 0 1px rgba(57,135,229,0.4); }
+    .option-card .oc-name { font-family: var(--font-display); font-weight: 700; font-size: 14.5px; display: flex; align-items: center; justify-content: space-between; }
+    .option-card .oc-check { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--border-strong); flex: none; display: flex; align-items: center; justify-content: center; }
+    .option-card.selected .oc-check { background: var(--cat-1); border-color: var(--cat-1); }
+    .option-card .oc-tagline { font-size: 11.5px; color: var(--text-secondary); }
+    .option-card .oc-desc { font-size: 11px; color: var(--text-muted); line-height: 1.45; margin-top: 2px; }
+    .option-card .oc-trait { margin-top: 6px; }
+
+    /* ---- 능력치 포인트 바이 ---- */
+    .pointbuy-remaining { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--surface-2); border-radius: var(--radius-sm); margin-bottom: 14px; }
+    .pointbuy-remaining .num { font-family: var(--font-display); font-size: 22px; font-weight: 800; color: var(--cat-1); }
+    .pointbuy-remaining .num.zero { color: var(--status-good); }
+    .pointbuy-remaining .num.over { color: var(--status-critical); }
+    .ability-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+    .ability-box { padding: 12px; border-radius: var(--radius-sm); background: var(--surface-2); border: 1px solid var(--border); text-align: center; }
+    .ability-box .ab-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; font-weight: 700; }
+    .ability-box .ab-stepper { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 8px 0 4px; }
+    .ability-box .ab-stepper button {
+      width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.06);
+      color: var(--text-primary); font-size: 15px; cursor: pointer; line-height: 1; font-family: var(--font-display);
+    }
+    .ability-box .ab-stepper button:disabled { opacity: 0.35; cursor: default; }
+    .ability-box .ab-score { font-family: var(--font-display); font-size: 22px; font-weight: 800; min-width: 30px; font-variant-numeric: tabular-nums; }
+    .ability-box .ab-mod { font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+    .ability-box.primary { border-color: rgba(57,135,229,0.5); }
+
+    /* ---- 외형 선택 ---- */
+    .appearance-group { margin-bottom: 14px; }
+    .appearance-group label { margin-top: 0; }
+    .chip-row { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    .wizard-nav { display: flex; justify-content: space-between; margin-top: 20px; gap: 10px; }
+
+    /* ---- 요약 화면 ---- */
+    .summary-hero { display: flex; align-items: center; gap: 14px; padding: 16px; background: var(--surface-2); border-radius: var(--radius-sm); margin-bottom: 14px; }
+    .summary-hero .avatar { width: 52px; height: 52px; font-size: 17px; }
+    .summary-hero .sh-name { font-family: var(--font-display); font-size: 19px; font-weight: 800; }
+    .summary-hero .sh-sub { color: var(--text-muted); font-size: 12.5px; margin-top: 2px; }
+
+    /* ---- 시나리오 진행 화면 ---- */
+    .scenario-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 10px; flex-wrap: wrap; }
+    .scenario-header .sc-title { font-family: var(--font-display); font-size: 13px; color: var(--text-muted); }
+    .scenario-card { padding: 22px; }
+    .scenario-card .sc-node-title { font-family: var(--font-display); font-size: 16px; font-weight: 700; margin: 0 0 10px; }
+    .scenario-card .sc-node-text { line-height: 1.75; font-size: 14px; color: var(--text-primary); white-space: pre-line; }
+    .scenario-choices { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+    .scenario-choice-btn {
+      text-align: left; padding: 12px 16px; border-radius: var(--radius-sm); border: 1px solid var(--glass-border);
+      background: rgba(255,255,255,0.05); color: var(--text-primary); cursor: pointer; font-size: 13.5px; font-family: inherit;
+      transition: border-color 0.12s ease, background 0.12s ease, transform 0.1s ease; display: flex; align-items: center; gap: 8px;
+    }
+    .scenario-choice-btn:hover { border-color: var(--cat-1); background: rgba(57,135,229,0.1); transform: translateX(2px); }
+    .scenario-choice-btn .arrow { flex: none; opacity: 0.6; }
+    .scenario-check-cta { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; background: var(--surface-2); border-radius: var(--radius-sm); margin-top: 14px; flex-wrap: wrap; }
+    .scenario-check-cta .cc-info { font-size: 12.5px; color: var(--text-secondary); }
+    .scenario-check-cta .cc-info b { color: var(--text-primary); font-family: var(--font-display); }
+    .combat-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+    .combat-side { padding: 12px; background: var(--surface-2); border-radius: var(--radius-sm); }
+    .combat-side .cs-name { font-family: var(--font-display); font-weight: 700; font-size: 13px; margin-bottom: 6px; display: flex; justify-content: space-between; }
+    .combat-log { margin-top: 12px; max-height: 130px; overflow-y: auto; display: flex; flex-direction: column-reverse; gap: 6px; }
+    .combat-log .cl-line { font-size: 12px; color: var(--text-secondary); padding: 6px 10px; background: var(--surface-2); border-radius: 6px; }
+    .combat-log .cl-line.dmg-player { border-left: 2px solid var(--status-critical); }
+    .combat-log .cl-line.dmg-enemy { border-left: 2px solid var(--status-good); }
+    .story-log-toggle { background: none; border: none; color: var(--text-muted); font-size: 11.5px; cursor: pointer; font-family: inherit; text-decoration: underline; padding: 0; margin-top: 14px; }
+    .story-log-list { margin-top: 8px; display: none; flex-direction: column; gap: 4px; }
+    .story-log-list.open { display: flex; }
+    .story-log-list .sl-line { font-size: 11.5px; color: var(--text-muted); padding: 5px 10px; background: var(--surface-2); border-radius: 6px; }
+    .ending-badge { display: inline-block; padding: 4px 12px; border-radius: 999px; font-family: var(--font-display); font-size: 11px; font-weight: 700; margin-bottom: 10px; }
+    .ending-badge.good { background: rgba(12,163,12,0.18); color: var(--status-good); }
+    .ending-badge.best { background: rgba(200,165,40,0.2); color: #e8c34a; }
+    .ending-badge.ambiguous { background: rgba(250,178,25,0.18); color: var(--status-warning); }
+    .ending-badge.bad { background: rgba(208,59,59,0.18); color: var(--status-critical); }
+
+    .toast {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: var(--surface-3); border: 1px solid var(--border-strong); color: var(--text-primary);
+      padding: 10px 18px; border-radius: var(--radius-sm); font-size: 13px; display: none; z-index: 999;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+    }
+    .flex-between { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+
+    /* ---------- initiative / combat tracker ---------- */
+    .init-add-row { display: grid; grid-template-columns: 1fr 90px auto; gap: 8px; align-items: end; }
+    .init-list { margin-top: 12px; }
+    .init-row {
+      display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: var(--radius-sm);
+      background: var(--surface-2); border: 1px solid var(--border); margin-bottom: 6px; transition: all 0.15s ease;
+    }
+    .init-row.current { border-color: var(--cat-1); background: #16233a; box-shadow: 0 0 0 1px rgba(57,135,229,0.4), 0 0 14px rgba(57,135,229,0.25); }
+    .init-score { flex: none; width: 34px; height: 34px; border-radius: 12px; background: var(--surface-3); display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 800; font-variant-numeric: tabular-nums; }
+    .init-row.current .init-score { background: var(--cat-1); color: #fff; }
+    .init-name { flex: 1; font-weight: 600; }
+    .init-turn-label { font-family: var(--font-display); font-size: 10.5px; color: var(--cat-1); font-weight: 700; }
+
+    /* ---------- bottom nav (mobile) ---------- */
+    .bottom-nav { display: none; }
+
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @keyframes popIn { 0% { transform: scale(0.72); opacity: 0.2; } 60% { transform: scale(1.08); } 100% { transform: scale(1); opacity: 1; } }
+    @keyframes flashPulse {
+      0% { box-shadow: 0 0 0 0 rgba(57,135,229,0.55); }
+      70% { box-shadow: 0 0 0 9px rgba(57,135,229,0); }
+      100% { box-shadow: 0 0 0 0 rgba(57,135,229,0); }
+    }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes slideIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
+
+    /* ================= 반응형 (모바일) ================= */
+    @media (max-width: 720px) {
+      .grid { grid-template-columns: 1fr; }
+      header nav.tabs { display: none; }
+      main { padding-bottom: calc(var(--bottom-nav-h) + 78px); }
+      .fab { bottom: calc(var(--bottom-nav-h) + 14px); }
+      .bottom-nav {
+        display: flex; position: fixed; left: 0; right: 0; bottom: 0; height: var(--bottom-nav-h);
+        background: var(--glass-bg-strong);
+        backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+        border-top: 1px solid var(--glass-border); z-index: 30;
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+      .bottom-nav button {
+        flex: 1; background: none; border: none; color: var(--text-muted); font-family: var(--font-display);
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+        font-size: 10.5px; font-weight: 600; cursor: pointer; position: relative;
+      }
+      .bottom-nav button.active { color: var(--cat-1); }
+      .bottom-nav button .feed-dot { position: absolute; top: 2px; right: 28%; width: 6px; height: 6px; border-radius: 50%; background: var(--cat-7); display: none; }
+      .bottom-nav button .feed-dot.show { display: block; }
+      .md-toggle { display: flex; }
+      .grid > div:first-child.md-hide, .grid > .card.md-hide { display: none; }
+      .row3 { grid-template-columns: 1fr 1fr; }
+      .row3 > div:nth-child(3) { grid-column: span 2; }
+      /* 솔로 플레이: 좁은 화면에서 전투 패널은 한 줄에 두 명을 욱여넣지 않고 세로로 쌓는다 */
+      .combat-panel { grid-template-columns: 1fr; }
+      .solo-char-card { flex-wrap: wrap; }
+      .solo-char-actions { flex: 1 1 100%; justify-content: flex-end; margin-top: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-blobs" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+  <header>
+    <h1><span class="dot"></span>TRPG 플랫폼</h1>
+    <nav class="tabs" id="tabs">
+      <button data-tab="char" class="active">캐릭터 시트</button>
+      <button data-tab="solo">솔로 플레이</button>
+      <button data-tab="activity">활동<span class="feed-dot" id="feed-dot-desktop"></span></button>
+      <button data-tab="gm">GM 도구</button>
+      <div class="tab-indicator" id="tab-indicator"></div>
+    </nav>
+  </header>
+
+  <main>
+    <!-- ============ 캐릭터 시트 ============ -->
+    <section id="panel-char" class="panel active">
+      <div class="md-toggle">
+        <button id="md-btn-list" class="active" onclick="setMdView('list')">목록</button>
+        <button id="md-btn-detail" onclick="setMdView('detail')">상세 / 편집</button>
+      </div>
+      <div class="grid">
+        <div id="char-list-col">
+          <div class="card">
+            <div class="flex-between">
+              <h3 style="margin:0">캐릭터 목록</h3>
+              <button class="btn small" onclick="newCharacter(); setMdView('detail');">+ 새 캐릭터</button>
+            </div>
+            <div class="search-box" style="margin-top:10px;">
+              <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" id="char-search" placeholder="이름 또는 직업으로 검색" oninput="renderCharList()">
+            </div>
+            <div id="char-list" class="list-scroll"></div>
+          </div>
+        </div>
+        <div id="char-detail-col" class="card">
+          <div class="flex-between">
+            <h3 id="char-form-title" style="margin:0">캐릭터 정보</h3>
+          </div>
+          <div class="summary-strip" id="char-summary"></div>
+          <input type="hidden" id="c-ID">
+
+          <div class="subtabs">
+            <button class="sub-tab-btn active" data-sub="overview" onclick="setCharSubtab('overview')">개요</button>
+            <button class="sub-tab-btn" data-sub="detail" onclick="setCharSubtab('detail')">상세 정보</button>
+          </div>
+
+          <div class="subpanel active" id="sub-overview">
+            <div class="row2">
+              <div><label>플레이어</label><input type="text" id="c-player" oninput="updateCharSummary()"></div>
+              <div><label>캐릭터명</label><input type="text" id="c-name" oninput="updateCharSummary()"></div>
+            </div>
+            <div class="row3">
+              <div><label>직업/클래스</label><input type="text" id="c-class" oninput="updateCharSummary()"></div>
+              <div><label>레벨</label><input type="number" id="c-level" value="1" oninput="updateCharSummary()"></div>
+              <div><label>이미지 URL</label><input type="text" id="c-image"></div>
+            </div>
+            <div class="row2">
+              <div>
+                <label>현재HP / 최대HP</label>
+                <div style="display:flex; gap:8px;">
+                  <input type="number" id="c-hp" style="width:50%" oninput="updateCharSummary()">
+                  <input type="number" id="c-maxhp" style="width:50%" oninput="updateCharSummary()">
+                </div>
+              </div>
+              <div>
+                <label>&nbsp;</label>
+                <div class="hp-adjust">
+                  <button class="btn secondary small" onclick="quickHp(-1)">-1</button>
+                  <button class="btn secondary small" onclick="quickHp(-5)">-5</button>
+                  <button class="btn secondary small" onclick="quickHp(1)">+1</button>
+                  <button class="btn secondary small" onclick="quickHp(5)">+5</button>
+                </div>
+              </div>
+            </div>
+
+            <label>스탯 <span style="color:var(--text-muted); font-weight:400;">— 막대 길이는 이 캐릭터 안에서의 상대값입니다</span></label>
+            <div id="stat-rows"></div>
+            <button class="btn secondary small" onclick="addStatRow('','')">+ 스탯 추가</button>
+          </div>
+
+          <div class="subpanel" id="sub-detail">
+            <label>스킬/특기</label>
+            <textarea id="c-skills"></textarea>
+            <label>소지품</label>
+            <textarea id="c-inventory"></textarea>
+            <label>배경설정</label>
+            <textarea id="c-background"></textarea>
+            <label>메모</label>
+            <textarea id="c-memo"></textarea>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn" onclick="saveCharacter()">저장</button>
+            <button class="btn danger" onclick="removeCharacter()">삭제</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 솔로 플레이 (D&D 기반 1인 진행 모드) ============ -->
+    <section id="panel-solo" class="panel">
+      <!-- 목록: 내 솔로 모험가들 -->
+      <div id="solo-view-list" class="solo-view active">
+        <div class="card solo-intro-card">
+          <h2>솔로 플레이</h2>
+          <p>혼자서도 D&D 기반의 짧은 모험을 떠날 수 있습니다. 발더스 게이트 3 스타일의 캐릭터 생성 위저드로 모험가를 만들고, 분기형 원샷 시나리오 "안개 낀 숲"을 진행해보세요. 선택과 판정 결과에 따라 결말이 달라집니다.</p>
+          <button class="btn" onclick="startSoloWizard()">+ 새 모험가 만들기</button>
+        </div>
+        <div class="card">
+          <h3>나의 모험가</h3>
+          <div id="solo-char-list" class="list-scroll"></div>
+        </div>
+      </div>
+
+      <!-- 캐릭터 생성 위저드 -->
+      <div id="solo-view-wizard" class="solo-view">
+        <div class="card">
+          <div class="wizard-steps" id="wizard-steps"></div>
+          <div id="wizard-step-content"></div>
+          <div class="wizard-nav">
+            <button class="btn secondary" id="wizard-back-btn" onclick="wizardBack()">이전</button>
+            <button class="btn" id="wizard-next-btn" onclick="wizardNext()">다음</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 시나리오 진행 -->
+      <div id="solo-view-play" class="solo-view">
+        <div class="scenario-header">
+          <div class="sc-title" id="sc-char-title"></div>
+          <button class="btn secondary small" onclick="exitSoloPlay()">← 모험가 목록으로</button>
+        </div>
+        <div class="card scenario-card" id="scenario-node-card"></div>
+        <button class="story-log-toggle" onclick="toggleStoryLog()">지금까지의 선택 기록 보기</button>
+        <div class="story-log-list" id="story-log-list"></div>
+      </div>
+    </section>
+
+    <!-- ============ 활동 (세션 로그 + 주사위 기록 통합) ============ -->
+    <section id="panel-activity" class="panel">
+      <div class="card">
+        <h3>기록 추가</h3>
+        <div class="row3">
+          <div><label>작성자</label><input type="text" id="l-author"></div>
+          <div>
+            <label>유형</label>
+            <select id="l-type">
+              <option>내레이션</option>
+              <option>대사</option>
+              <option>판정</option>
+              <option>기타</option>
+            </select>
+          </div>
+          <div></div>
+        </div>
+        <label>내용</label>
+        <textarea id="l-content" placeholder="세션 중 있었던 일을 기록하세요"></textarea>
+        <div class="btn-row">
+          <button class="btn" onclick="addLog()">기록 추가</button>
+          <button class="btn secondary" onclick="openDice()">
+            <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 L21 8 L21 16 L12 22 L3 16 L3 8 Z"/></svg>
+            주사위 굴리기
+          </button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="flex-between">
+          <h3 style="margin:0">활동 피드</h3>
+        </div>
+        <div class="filter-row" id="log-filter-row" style="margin-top:10px;"></div>
+        <div id="log-list"><div class="empty-msg">기록이 없습니다.</div></div>
+      </div>
+    </section>
+
+    <!-- ============ GM 도구 ============ -->
+    <section id="panel-gm" class="panel">
+      <div id="gm-gate" class="gm-gate">
+        <p>GM 모드를 켜면 전투 순서, NPC/몬스터 관리, 게임 상태를 편집할 수 있습니다.</p>
+        <button class="btn" onclick="enableGmMode()">GM 모드 켜기</button>
+      </div>
+      <div id="gm-content" style="display:none;">
+        <div class="flex-between">
+          <h3 style="color:var(--text-muted); text-transform:uppercase; font-size:12px;">GM 모드 사용 중</h3>
+          <button class="btn secondary small" onclick="disableGmMode()">GM 모드 끄기</button>
+        </div>
+
+        <div class="card">
+          <h3>게임 상태</h3>
+          <label>현재 씬</label>
+          <input type="text" id="gs-scene">
+          <div class="row2">
+            <div>
+              <label>라운드</label>
+              <div style="display:flex; gap:8px; align-items:center;">
+                <input type="number" id="gs-round" style="flex:1">
+                <button class="btn secondary small" onclick="adjustRound(-1)">-1</button>
+                <button class="btn secondary small" onclick="adjustRound(1)">+1</button>
+              </div>
+            </div>
+            <div><label>다음 세션 일정</label><input type="text" id="gs-next"></div>
+          </div>
+          <label>공지</label>
+          <textarea id="gs-notice"></textarea>
+          <div class="btn-row"><button class="btn" onclick="saveGameState()">게임 상태 저장</button></div>
+        </div>
+
+        <div class="card">
+          <h3>전투 순서 (이니셔티브)</h3>
+          <div class="init-add-row">
+            <div>
+              <label>이름</label>
+              <input type="text" id="init-name" placeholder="이름 입력 또는 아래에서 선택" list="init-name-options">
+              <datalist id="init-name-options"></datalist>
+            </div>
+            <div><label>선제값</label><input type="number" id="init-score" placeholder="10"></div>
+            <button class="btn small" id="init-add-btn" onclick="addCombatant()">추가</button>
+          </div>
+          <div class="init-list" id="init-list"></div>
+          <div class="btn-row">
+            <button class="btn" onclick="nextTurn()">다음 턴</button>
+            <button class="btn secondary" onclick="clearInitiative()">전투 초기화</button>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div>
+            <div class="card">
+              <div class="flex-between">
+                <h3 style="margin:0">NPC / 몬스터</h3>
+                <button class="btn small" onclick="newNpc()">+ 추가</button>
+              </div>
+              <div class="search-box" style="margin-top:10px;">
+                <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" id="npc-search" placeholder="이름으로 검색" oninput="renderNpcList()">
+              </div>
+              <div id="npc-list" class="list-scroll"></div>
+            </div>
+          </div>
+          <div class="card">
+            <h3>NPC / 몬스터 정보</h3>
+            <input type="hidden" id="n-ID">
+            <label>이름</label>
+            <input type="text" id="n-name">
+            <div class="row2">
+              <div>
+                <label>종류</label>
+                <select id="n-type"><option>NPC</option><option>몬스터</option></select>
+              </div>
+              <div>
+                <label>현재HP / 최대HP</label>
+                <div style="display:flex; gap:8px;">
+                  <input type="number" id="n-hp" style="width:50%">
+                  <input type="number" id="n-maxhp" style="width:50%">
+                </div>
+              </div>
+            </div>
+            <div class="hp-adjust">
+              <button class="btn secondary small" onclick="quickNpcHp(-1)">-1</button>
+              <button class="btn secondary small" onclick="quickNpcHp(-5)">-5</button>
+              <button class="btn secondary small" onclick="quickNpcHp(1)">+1</button>
+              <button class="btn secondary small" onclick="quickNpcHp(5)">+5</button>
+            </div>
+            <label>스탯(JSON) — 예: {"AC":13,"공격":"+4"}</label>
+            <input type="text" id="n-stats" placeholder='{"AC":13}'>
+            <label>설명</label>
+            <textarea id="n-desc"></textarea>
+            <label>메모</label>
+            <textarea id="n-memo"></textarea>
+            <div class="btn-row">
+              <button class="btn" onclick="saveNpc()">저장</button>
+              <button class="btn danger" onclick="removeNpc()">삭제</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ 플로팅 주사위 (어디서나 접근 가능) ============ -->
+  <button class="fab" id="dice-fab" onclick="toggleDice()" title="주사위 굴리기" aria-label="주사위 굴리기">
+    <svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2 L21 8 L21 16 L12 22 L3 16 L3 8 Z"/><path d="M12 2 L12 22 M3 8 L12 12 L21 8 M3 16 L12 12 L21 16" opacity="0.55"/></svg>
+  </button>
+  <div class="drawer-backdrop" id="drawer-backdrop" onclick="closeDice()"></div>
+  <div class="drawer" id="dice-drawer">
+    <div class="drawer-handle"></div>
+    <div class="drawer-header">
+      <h2>주사위 굴리기</h2>
+      <button class="drawer-close" onclick="closeDice()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="dice-buttons">
+      <button onclick="pickDie('1d4')">d4</button>
+      <button onclick="pickDie('1d6')">d6</button>
+      <button onclick="pickDie('1d8')">d8</button>
+      <button onclick="pickDie('1d10')">d10</button>
+      <button onclick="pickDie('1d12')">d12</button>
+      <button onclick="pickDie('1d20')">d20</button>
+      <button onclick="pickDie('1d100')">d100</button>
+      <button onclick="pickDie('2d20kh1')">어드밴티지</button>
+      <button onclick="pickDie('2d20kl1')">디스어드밴티지</button>
+    </div>
+    <div class="row3">
+      <div><label>굴리는 사람</label><input type="text" id="d-roller"></div>
+      <div>
+        <label>캐릭터</label>
+        <select id="d-character"><option value="">(선택 안 함)</option></select>
+      </div>
+      <div><label>메모</label><input type="text" id="d-memo" placeholder="예: 공격 판정"></div>
+    </div>
+    <label>주사위 표기법 (예: 1d20+5, 2d6, 4d6kh3)</label>
+    <input type="text" id="d-notation" value="1d20">
+    <div class="btn-row">
+      <button class="btn" id="roll-btn" onclick="doRoll()">
+        <svg class="icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 L21 8 L21 16 L12 22 L3 16 L3 8 Z"/><circle cx="12" cy="12" r="2" fill="currentColor" stroke="none"/></svg>
+        굴리기
+      </button>
+    </div>
+
+    <div class="roll-stage">
+      <svg class="icon die-icon" id="die-icon" viewBox="0 0 24 24" fill="none" stroke="var(--cat-1)" stroke-width="1.4">
+        <path d="M12 2 L21 8 L21 16 L12 22 L3 16 L3 8 Z"/>
+        <path d="M12 2 L12 22 M3 8 L12 12 L21 8 M3 16 L12 12 L21 16" opacity="0.55"/>
+      </svg>
+      <div class="roll-readout">
+        <div class="total" id="roll-total">0</div>
+        <div class="notation-label" id="roll-notation">주사위를 굴려보세요</div>
+        <div id="roll-badge"></div>
+      </div>
+      <div class="sparkline-wrap">
+        <div id="sparkline"></div>
+        <div class="cap">최근 굴림 추이</div>
+      </div>
+    </div>
+    <div class="term-breakdown" id="term-breakdown"></div>
+
+    <div class="mini-roll-list" id="mini-roll-list"></div>
+    <button class="see-all-link" onclick="closeDice(); switchTab('activity');">전체 활동 피드에서 보기 →</button>
+  </div>
+
+  <!-- ============ 모바일 하단 네비게이션 ============ -->
+  <nav class="bottom-nav" id="bottom-nav">
+    <button data-tab="char" class="active" onclick="switchTab('char')">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="13" y2="16"/></svg>
+      캐릭터
+    </button>
+    <button data-tab="solo" onclick="switchTab('solo')">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M15 9 L10.5 13.5 L9 15 L13.5 10.5 Z"/></svg>
+      솔로
+    </button>
+    <button data-tab="activity" onclick="switchTab('activity')">
+      <span class="feed-dot" id="feed-dot-mobile"></span>
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7 v5 l3 3"/></svg>
+      활동
+    </button>
+    <button data-tab="gm" onclick="switchTab('gm')">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 L20 6 V12 C20 17 16.5 20 12 21 C7.5 20 4 17 4 12 V6 Z"/></svg>
+      GM
+    </button>
+  </nav>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ================= 팔레트 & 색상 유틸 =================
+    const CATEGORICAL_HEX = ['#3987e5','#d95926','#199e70','#c98500','#d55181','#008300','#9085e9','#e66767'];
+    const STATUS = { good: 'var(--status-good)', warning: 'var(--status-warning)', serious: 'var(--status-serious)', critical: 'var(--status-critical)' };
+    const LOG_TYPE_COLOR = { '내레이션': CATEGORICAL_HEX[0], '대사': CATEGORICAL_HEX[1], '판정': CATEGORICAL_HEX[2], '기타': CATEGORICAL_HEX[3], '주사위': CATEGORICAL_HEX[6] };
+    const NPC_TYPE_COLOR = { 'NPC': CATEGORICAL_HEX[0], '몬스터': CATEGORICAL_HEX[7] };
+
+    let classColorMap = {};
+    function colorForClass(name) {
+      const key = String(name || '기타').trim() || '기타';
+      if (!classColorMap[key]) {
+        classColorMap[key] = CATEGORICAL_HEX[Object.keys(classColorMap).length % CATEGORICAL_HEX.length];
+      }
+      return classColorMap[key];
+    }
+    function textColorFor(bgHex) {
+      const r = parseInt(bgHex.slice(1,3),16), g = parseInt(bgHex.slice(3,5),16), b = parseInt(bgHex.slice(5,7),16);
+      const lum = (0.299*r + 0.587*g + 0.114*b) / 255;
+      return lum > 0.62 ? '#0b0b0b' : '#ffffff';
+    }
+    function hpPct(hp, maxHp) {
+      const h = Number(hp) || 0, m = Number(maxHp) || 1;
+      return Math.max(0, Math.min(100, (h / m) * 100));
+    }
+    function hpColor(pct) {
+      if (pct > 60) return STATUS.good;
+      if (pct > 30) return STATUS.warning;
+      return STATUS.critical;
+    }
+    function renderHpMeter(hp, maxHp) {
+      const pct = hpPct(hp, maxHp);
+      const color = hpColor(pct);
+      return `<div class="hpbar-wrap">
+        <div class="hpbar"><div class="hpbar-fill" style="width:${pct}%; background:${color};"></div></div>
+        <div class="hp-num">${Number(hp)||0} / ${Number(maxHp)||0}</div>
+      </div>`;
+    }
+    function renderSpecStrip(json) {
+      let stats = {};
+      try { stats = json ? JSON.parse(json) : {}; } catch (e) { stats = {}; }
+      const entries = Object.entries(stats).filter(([k,v]) => k);
+      if (!entries.length) return '';
+      const numeric = entries.filter(([k,v]) => !isNaN(parseFloat(v)) && isFinite(v));
+      const max = numeric.length ? Math.max(...numeric.map(([k,v]) => Number(v))) : 1;
+      return '<div class="spec-strip">' + entries.slice(0, 6).map(([k,v]) => {
+        const isNum = !isNaN(parseFloat(v)) && isFinite(v);
+        if (isNum) {
+          const pct = Math.max(6, (Number(v) / (max || 1)) * 100);
+          return `<span class="spec-chip">${escapeHtml(k)} <b>${escapeHtml(v)}</b><span class="mini-bar"><i style="width:${pct}%"></i></span></span>`;
+        }
+        return `<span class="spec-chip">${escapeHtml(k)} <b>${escapeHtml(v)}</b></span>`;
+      }).join('') + '</div>';
+    }
+
+    // ================= 상태 =================
+    let characters = [];
+    let npcs = [];
+    let selectedCharId = null;
+    let selectedNpcId = null;
+    let prevCharHp = {};
+    let prevNpcHp = {};
+    let rollHistory = [];
+    let logTypeFilter = '전체';
+    let lastSessionLogRows = [];
+    let lastRollLogRows = [];
+    let charSubtab = 'overview';
+    let mdView = 'list';
+    let hasUnseenActivity = false;
+    let combatants = []; // {id, name, score}
+    let currentTurnId = null;
+
+    // ================= 탭 전환 (데스크톱 상단 + 모바일 하단 공용) =================
+    function moveIndicator(btn) {
+      if (!btn) return;
+      const nav = document.getElementById('tabs');
+      const ind = document.getElementById('tab-indicator');
+      const navRect = nav.getBoundingClientRect();
+      const r = btn.getBoundingClientRect();
+      ind.style.left = (r.left - navRect.left) + 'px';
+      ind.style.width = r.width + 'px';
+    }
+    function switchTab(name) {
+      document.querySelectorAll('nav.tabs button[data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+      document.querySelectorAll('.bottom-nav button[data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.getElementById('panel-' + name).classList.add('active');
+      moveIndicator(document.querySelector('nav.tabs button[data-tab="' + name + '"]'));
+      if (name === 'activity') {
+        hasUnseenActivity = false;
+        document.getElementById('feed-dot-desktop').classList.remove('show');
+        document.getElementById('feed-dot-mobile').classList.remove('show');
+      }
+      if (name === 'char') {
+        // 다른 탭에서 캐릭터 탭으로 들어올 때는 항상 목록부터 보여준다 (모바일 마스터-디테일 관행)
+        setMdView('list');
+      }
+      if (name === 'solo') {
+        // 진행 중이던 모험이 있어도 탭 재진입 시에는 목록부터 (다른 탭과 동일한 관행), 이어하기는 목록에서 선택
+        setSoloView('list');
+        loadSoloCharacters();
+      }
+    }
+    document.querySelectorAll('nav.tabs button[data-tab]').forEach(btn => {
+      btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    });
+    window.addEventListener('resize', () => {
+      const active = document.querySelector('nav.tabs button.active');
+      if (active) moveIndicator(active);
+    });
+
+    // ================= 목록/상세 반응형 토글 (모바일) =================
+    function setMdView(view) {
+      mdView = view;
+      document.getElementById('md-btn-list').classList.toggle('active', view === 'list');
+      document.getElementById('md-btn-detail').classList.toggle('active', view === 'detail');
+      document.getElementById('char-list-col').classList.toggle('md-hide', view !== 'list');
+      document.getElementById('char-detail-col').classList.toggle('md-hide', view !== 'detail');
+    }
+
+    function toast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.style.display = 'block';
+      clearTimeout(t._timer);
+      t._timer = setTimeout(() => t.style.display = 'none', 2200);
+    }
+
+    function withHandlers(successFn, failureFn) {
+      return google.script.run
+        .withSuccessHandler(successFn)
+        .withFailureHandler(err => {
+          toast('오류: ' + (err && err.message ? err.message : err));
+          if (failureFn) failureFn(err);
+        });
+    }
+
+    function loadLocalPrefs() {
+      const name = localStorage.getItem('trpg_player_name') || '';
+      document.getElementById('d-roller').value = name;
+      document.getElementById('l-author').value = name;
+      if (localStorage.getItem('trpg_gm_mode') === '1') {
+        document.getElementById('gm-gate').style.display = 'none';
+        document.getElementById('gm-content').style.display = 'block';
+      }
+      ['d-roller', 'l-author'].forEach(id => {
+        document.getElementById(id).addEventListener('change', e => {
+          localStorage.setItem('trpg_player_name', e.target.value);
+        });
+      });
+    }
+
+    // ================= 캐릭터 =================
+    function renderCharList() {
+      const el = document.getElementById('char-list');
+      const q = (document.getElementById('char-search').value || '').toLowerCase().trim();
+      const filtered = characters.filter(c => !q ||
+        String(c['캐릭터명']||'').toLowerCase().includes(q) ||
+        String(c['직업/클래스']||'').toLowerCase().includes(q) ||
+        String(c['플레이어']||'').toLowerCase().includes(q));
+      if (!characters.length) { el.innerHTML = '<div class="empty-msg">등록된 캐릭터가 없습니다.<br>"+ 새 캐릭터"로 시작해보세요.</div>'; return; }
+      if (!filtered.length) { el.innerHTML = '<div class="empty-msg">검색 결과가 없습니다.</div>'; return; }
+      el.innerHTML = filtered.map(c => {
+        const color = colorForClass(c['직업/클래스']);
+        const initials = String(c['캐릭터명'] || '?').trim().slice(0, 2);
+        const textColor = textColorFor(color);
+        return `<div class="list-item" data-id="${c.ID}" onclick="selectCharacter('${c.ID}')">
+          <div class="avatar" style="background:${color}; color:${textColor};">${escapeHtml(initials)}</div>
+          <div class="li-body">
+            <div class="li-top">
+              <span class="li-name">${escapeHtml(c['캐릭터명'] || '(이름 없음)')}</span>
+              <span class="pill" style="background:${color}22; color:${color};">${escapeHtml(c['직업/클래스'] || '미분류')} · Lv.${c['레벨']||1}</span>
+            </div>
+            <div class="li-meta">${escapeHtml(c['플레이어'] || '플레이어 미지정')}</div>
+            ${renderHpMeter(c['현재HP'], c['최대HP'])}
+            ${renderSpecStrip(c['스탯(JSON)'])}
+          </div>
+        </div>`;
+      }).join('');
+      if (selectedCharId) {
+        const node = el.querySelector(`[data-id="${selectedCharId}"]`);
+        if (node) node.classList.add('selected');
+      }
+    }
+
+    function flashChangedCards(listEl, oldMap, newList, idKey, hpKey) {
+      newList.forEach(item => {
+        const id = item[idKey];
+        const oldHp = oldMap[id];
+        const newHp = Number(item[hpKey]);
+        if (oldHp !== undefined && oldHp !== newHp) {
+          const node = listEl.querySelector(`[data-id="${id}"]`);
+          if (node) { node.classList.remove('flash'); void node.offsetWidth; node.classList.add('flash'); }
+        }
+        oldMap[id] = newHp;
+      });
+    }
+
+    function loadCharacters(preserveSelection, isPoll) {
+      withHandlers(list => {
+        characters = list;
+        renderCharList();
+        populateCharacterSelect();
+        populateInitiativeOptions();
+        if (isPoll) flashChangedCards(document.getElementById('char-list'), prevCharHp, list, 'ID', '현재HP');
+        else list.forEach(c => prevCharHp[c.ID] = Number(c['현재HP']));
+        if (preserveSelection && selectedCharId) {
+          const still = characters.find(c => c.ID === selectedCharId);
+          if (still) fillCharForm(still); else newCharacter();
+        }
+      }).getCharacters();
+    }
+
+    function populateCharacterSelect() {
+      const sel = document.getElementById('d-character');
+      const current = sel.value;
+      sel.innerHTML = '<option value="">(선택 안 함)</option>' +
+        characters.map(c => `<option value="${escapeAttr(c['캐릭터명'])}">${escapeHtml(c['캐릭터명'])}</option>`).join('');
+      sel.value = current;
+    }
+
+    function selectCharacter(id) {
+      selectedCharId = id;
+      const c = characters.find(x => x.ID === id);
+      if (c) fillCharForm(c);
+      renderCharList();
+      setMdView('detail');
+    }
+
+    function setCharSubtab(name) {
+      charSubtab = name;
+      document.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.sub === name));
+      document.getElementById('sub-overview').classList.toggle('active', name === 'overview');
+      document.getElementById('sub-detail').classList.toggle('active', name === 'detail');
+    }
+
+    function updateCharSummary() {
+      const el = document.getElementById('char-summary');
+      const name = document.getElementById('c-name').value || '(이름 없음)';
+      const cls = document.getElementById('c-class').value || '미분류';
+      const lvl = document.getElementById('c-level').value || 1;
+      const hp = Number(document.getElementById('c-hp').value) || 0;
+      const maxHp = Number(document.getElementById('c-maxhp').value) || 0;
+      const color = colorForClass(cls);
+      el.innerHTML = `
+        <div class="summary-item" style="min-width:auto; text-align:left;">
+          <div class="v" style="font-size:14px;">${escapeHtml(name)}</div>
+          <div class="l" style="color:${color};">${escapeHtml(cls)}</div>
+        </div>
+        <div class="summary-item"><div class="v">${lvl}</div><div class="l">레벨</div></div>
+        <div class="summary-item"><div class="v" style="color:${hpColor(hpPct(hp,maxHp))}">${hp}</div><div class="l">HP</div></div>
+        <div class="summary-item"><div class="v">${maxHp}</div><div class="l">최대HP</div></div>
+      `;
+    }
+
+    function fillCharForm(c) {
+      document.getElementById('c-ID').value = c.ID || '';
+      document.getElementById('c-player').value = c['플레이어'] || '';
+      document.getElementById('c-name').value = c['캐릭터명'] || '';
+      document.getElementById('c-class').value = c['직업/클래스'] || '';
+      document.getElementById('c-level').value = c['레벨'] || 1;
+      document.getElementById('c-image').value = c['이미지URL'] || '';
+      document.getElementById('c-hp').value = c['현재HP'] || 0;
+      document.getElementById('c-maxhp').value = c['최대HP'] || 0;
+      document.getElementById('c-skills').value = c['스킬/특기'] || '';
+      document.getElementById('c-inventory').value = c['소지품'] || '';
+      document.getElementById('c-background').value = c['배경설정'] || '';
+      document.getElementById('c-memo').value = c['메모'] || '';
+      document.getElementById('char-form-title').textContent = '캐릭터 정보 편집';
+      renderStatRows(c['스탯(JSON)']);
+      setCharSubtab('overview');
+      updateCharSummary();
+    }
+
+    function newCharacter() {
+      selectedCharId = null;
+      document.getElementById('c-ID').value = '';
+      ['c-player','c-name','c-class','c-image','c-skills','c-inventory','c-background','c-memo'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('c-level').value = 1;
+      document.getElementById('c-hp').value = 10;
+      document.getElementById('c-maxhp').value = 10;
+      document.getElementById('char-form-title').textContent = '새 캐릭터';
+      renderStatRows(null);
+      renderCharList();
+      setCharSubtab('overview');
+      updateCharSummary();
+    }
+
+    function renderStatRows(json) {
+      let stats = {};
+      try { stats = json ? JSON.parse(json) : {}; } catch (e) { stats = {}; }
+      const el = document.getElementById('stat-rows');
+      el.innerHTML = '';
+      const keys = Object.keys(stats);
+      if (!keys.length) { addStatRow('STR', 10); addStatRow('DEX', 10); return; }
+      keys.forEach(k => addStatRow(k, stats[k]));
+    }
+
+    function addStatRow(key, value) {
+      const el = document.getElementById('stat-rows');
+      const row = document.createElement('div');
+      row.className = 'stat-row';
+      row.innerHTML = `<input type="text" class="stat-key" placeholder="이름" value="${escapeAttr(key)}">
+        <input type="text" class="stat-val" placeholder="값" value="${escapeAttr(value)}">
+        <button class="btn secondary small" onclick="this.parentElement.remove()">삭제</button>`;
+      el.appendChild(row);
+    }
+
+    function collectStats() {
+      const rows = document.querySelectorAll('#stat-rows .stat-row');
+      const obj = {};
+      rows.forEach(r => {
+        const k = r.querySelector('.stat-key').value.trim();
+        const v = r.querySelector('.stat-val').value.trim();
+        if (k) obj[k] = isNaN(v) || v === '' ? v : Number(v);
+      });
+      return JSON.stringify(obj);
+    }
+
+    function saveCharacter() {
+      const char = {
+        ID: document.getElementById('c-ID').value || null,
+        '플레이어': document.getElementById('c-player').value,
+        '캐릭터명': document.getElementById('c-name').value,
+        '직업/클래스': document.getElementById('c-class').value,
+        '레벨': Number(document.getElementById('c-level').value) || 1,
+        '현재HP': Number(document.getElementById('c-hp').value) || 0,
+        '최대HP': Number(document.getElementById('c-maxhp').value) || 0,
+        '스탯(JSON)': collectStats(),
+        '스킬/특기': document.getElementById('c-skills').value,
+        '소지품': document.getElementById('c-inventory').value,
+        '배경설정': document.getElementById('c-background').value,
+        '이미지URL': document.getElementById('c-image').value,
+        '메모': document.getElementById('c-memo').value
+      };
+      if (!char['캐릭터명']) { toast('캐릭터명을 입력하세요.'); return; }
+      withHandlers(saved => {
+        selectedCharId = saved.ID;
+        toast('저장했습니다.');
+        loadCharacters(true);
+      }).upsertCharacter(char);
+    }
+
+    function removeCharacter() {
+      const id = document.getElementById('c-ID').value;
+      if (!id) { toast('저장된 캐릭터가 아닙니다.'); return; }
+      if (!confirm('이 캐릭터를 삭제할까요?')) return;
+      withHandlers(() => {
+        toast('삭제했습니다.');
+        selectedCharId = null;
+        newCharacter();
+        loadCharacters(false);
+      }).deleteCharacter(id);
+    }
+
+    function quickHp(delta) {
+      const id = document.getElementById('c-ID').value;
+      if (!id) {
+        const cur = Number(document.getElementById('c-hp').value) || 0;
+        document.getElementById('c-hp').value = Math.max(0, cur + delta);
+        updateCharSummary();
+        return;
+      }
+      withHandlers(newHp => {
+        document.getElementById('c-hp').value = newHp;
+        updateCharSummary();
+        loadCharacters(true);
+      }).adjustCharacterHP(id, delta);
+    }
+
+    // ================= 주사위 (플로팅 드로어) =================
+    function toggleDice() {
+      const drawer = document.getElementById('dice-drawer');
+      if (drawer.classList.contains('open')) closeDice(); else openDice();
+    }
+    function openDice() {
+      document.getElementById('dice-drawer').classList.add('open');
+      document.getElementById('drawer-backdrop').classList.add('open');
+      document.getElementById('dice-fab').classList.add('open');
+    }
+    function closeDice() {
+      document.getElementById('dice-drawer').classList.remove('open');
+      document.getElementById('drawer-backdrop').classList.remove('open');
+      document.getElementById('dice-fab').classList.remove('open');
+    }
+    function pickDie(code) {
+      document.getElementById('d-notation').value = code;
+    }
+
+    function renderSparkline(values) {
+      const el = document.getElementById('sparkline');
+      if (!values.length) { el.innerHTML = `<svg width="80" height="26"></svg>`; return; }
+      const w = 80, h = 26, pad = 3;
+      const min = Math.min(...values), max = Math.max(...values);
+      const span = (max - min) || 1;
+      const pts = values.map((v, i) => {
+        const x = pad + (i / Math.max(1, values.length - 1)) * (w - pad * 2);
+        const y = h - pad - ((v - min) / span) * (h - pad * 2);
+        return [x, y];
+      });
+      const path = pts.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+      const last = pts[pts.length - 1];
+      el.innerHTML = `<svg width="${w}" height="${h}">
+        <path d="${path}" fill="none" stroke="var(--text-muted)" stroke-width="1.5"/>
+        <circle cx="${last[0]}" cy="${last[1]}" r="3.2" fill="var(--cat-1)" stroke="var(--surface-1)" stroke-width="2"/>
+      </svg>`;
+    }
+
+    function renderTermBreakdown(terms) {
+      const el = document.getElementById('term-breakdown');
+      if (!terms || !terms.length) { el.innerHTML = ''; return; }
+      el.innerHTML = terms.map(t => {
+        if (t.kind === 'flat') {
+          return `<div class="term-line"><span class="term-label">보정치</span><span class="die-chip flat">${t.sign < 0 ? '-' : '+'}${t.value}</span></div>`;
+        }
+        const chips = t.dice.map(d => {
+          let cls = 'die-chip';
+          if (!d.kept) cls += ' dropped';
+          else if (t.sides === 20 && t.dice.length === 1 && d.value === 20) cls += ' crit-good';
+          else if (t.sides === 20 && t.dice.length === 1 && d.value === 1) cls += ' crit-bad';
+          return `<span class="${cls}">${d.value}</span>`;
+        }).join('');
+        return `<div class="term-line"><span class="term-label">${escapeHtml(t.label)}</span>${chips}</div>`;
+      }).join('');
+    }
+
+    function doRoll() {
+      const notation = document.getElementById('d-notation').value;
+      const roller = document.getElementById('d-roller').value;
+      const character = document.getElementById('d-character').value;
+      const memo = document.getElementById('d-memo').value;
+      if (roller) localStorage.setItem('trpg_player_name', roller);
+
+      const btn = document.getElementById('roll-btn');
+      const dieIcon = document.getElementById('die-icon');
+      const totalEl = document.getElementById('roll-total');
+
+      // 이전 굴림이 타임아웃 등으로 안 멈춘 채 남아있을 경우를 대비해 먼저 정리
+      if (window.__diceFlickerTimer) { clearInterval(window.__diceFlickerTimer); window.__diceFlickerTimer = null; }
+      if (window.__diceStopTimer) { clearTimeout(window.__diceStopTimer); window.__diceStopTimer = null; }
+      if (window.__diceWatchdog) { clearTimeout(window.__diceWatchdog); window.__diceWatchdog = null; }
+
+      btn.disabled = true;
+      dieIcon.classList.add('spinning');
+      window.__diceFlickerTimer = setInterval(() => { totalEl.textContent = 1 + Math.floor(Math.random() * 20); }, 60);
+      const start = Date.now();
+      const MIN_MS = 500;
+
+      function stopSpin() {
+        if (window.__diceFlickerTimer) { clearInterval(window.__diceFlickerTimer); window.__diceFlickerTimer = null; }
+        if (window.__diceWatchdog) { clearTimeout(window.__diceWatchdog); window.__diceWatchdog = null; }
+        dieIcon.classList.remove('spinning');
+        btn.disabled = false;
+      }
+
+      // 서버 응답이 지나치게 지연되거나 콜백이 아예 오지 않는 경우를 대비한 안전장치
+      window.__diceWatchdog = setTimeout(() => {
+        stopSpin();
+        totalEl.textContent = '0';
+        toast('오류: 서버 응답이 없어 주사위 굴리기를 중단했습니다. 다시 시도해주세요.');
+      }, 15000);
+
+      withHandlers(res => {
+        const elapsed = Date.now() - start;
+        window.__diceStopTimer = setTimeout(() => {
+          window.__diceStopTimer = null;
+          stopSpin();
+          totalEl.textContent = res.total;
+          totalEl.classList.remove('pop'); void totalEl.offsetWidth; totalEl.classList.add('pop');
+          document.getElementById('roll-notation').textContent = res.notation + '  =  ' + res.detail;
+          const badgeEl = document.getElementById('roll-badge');
+          if (res.critical === 'success') badgeEl.innerHTML = '<span class="badge success">크리티컬 성공</span>';
+          else if (res.critical === 'fail') badgeEl.innerHTML = '<span class="badge fail">크리티컬 실패</span>';
+          else badgeEl.innerHTML = '';
+          renderTermBreakdown(res.terms);
+          rollHistory.push(res.total);
+          if (rollHistory.length > 12) rollHistory.shift();
+          renderSparkline(rollHistory);
+          loadRollLog();
+          markActivityUnseen();
+        }, Math.max(0, MIN_MS - elapsed));
+      }, () => {
+        // 서버 호출이 실패한 경우(잘못된 표기법, 범위 초과 등) — 회전을 멈추고 초기 표시로 되돌림
+        stopSpin();
+        totalEl.textContent = '0';
+        document.getElementById('roll-notation').textContent = '주사위를 굴려보세요';
+      }).rollDice(notation, roller, character, memo);
+    }
+
+    function renderMiniRollList(rows) {
+      const el = document.getElementById('mini-roll-list');
+      if (!rows.length) { el.innerHTML = '<div class="empty-msg" style="padding:10px;">아직 굴린 기록이 없습니다.</div>'; return; }
+      el.innerHTML = rows.slice(0, 5).map(r => `
+        <div class="mini-roll-row">
+          <span><span class="who">${escapeHtml(r['플레이어'])}</span> <span class="notation">${escapeHtml(r['주사위식'])}</span></span>
+          <span class="total">${r['합계']}</span>
+        </div>`).join('');
+    }
+
+    function loadRollLog() {
+      withHandlers(rows => {
+        lastRollLogRows = rows;
+        renderMiniRollList(rows);
+        if (!rollHistory.length) {
+          rollHistory = rows.slice(0, 12).reverse().map(r => Number(r['합계']) || 0);
+          renderSparkline(rollHistory);
+        }
+        renderActivityFeed();
+      }).getRollLog(25);
+    }
+
+    // ================= 활동 피드 (세션로그 + 주사위기록 통합) =================
+    function renderLogFilters() {
+      const types = ['전체', '내레이션', '대사', '판정', '기타', '주사위'];
+      const el = document.getElementById('log-filter-row');
+      el.innerHTML = types.map(t => {
+        const color = LOG_TYPE_COLOR[t] || 'var(--text-muted)';
+        const active = t === logTypeFilter ? ' active' : '';
+        return `<button class="filter-chip${active}" onclick="setLogFilter('${t}')">${t !== '전체' ? `<span class="sw" style="background:${color}"></span>` : ''}${t}</button>`;
+      }).join('');
+    }
+    function setLogFilter(t) {
+      logTypeFilter = t;
+      renderLogFilters();
+      renderActivityFeed();
+    }
+
+    function addLog() {
+      const author = document.getElementById('l-author').value;
+      const type = document.getElementById('l-type').value;
+      const content = document.getElementById('l-content').value;
+      if (!content.trim()) { toast('내용을 입력하세요.'); return; }
+      if (author) localStorage.setItem('trpg_player_name', author);
+      withHandlers(() => {
+        document.getElementById('l-content').value = '';
+        toast('기록을 추가했습니다.');
+        loadLog();
+        markActivityUnseen();
+      }).addSessionLog(author, type, content);
+    }
+
+    function markActivityUnseen() {
+      const activityPanelVisible = document.getElementById('panel-activity').classList.contains('active');
+      if (activityPanelVisible) return;
+      hasUnseenActivity = true;
+      document.getElementById('feed-dot-desktop').classList.add('show');
+      document.getElementById('feed-dot-mobile').classList.add('show');
+    }
+
+    function renderActivityFeed() {
+      const el = document.getElementById('log-list');
+      const merged = [
+        ...lastSessionLogRows.map(r => ({ kind: 'log', time: r['시간'], author: r['작성자'], type: r['유형'], content: r['내용'] })),
+        ...lastRollLogRows.map(r => ({ kind: 'roll', time: r['시간'], author: r['플레이어'], character: r['캐릭터명'], notation: r['주사위식'], detail: r['결과상세'], total: r['합계'] }))
+      ].sort((a, b) => String(b.time).localeCompare(String(a.time)));
+
+      const filtered = merged.filter(item => {
+        if (logTypeFilter === '전체') return true;
+        if (logTypeFilter === '주사위') return item.kind === 'roll';
+        return item.kind === 'log' && item.type === logTypeFilter;
+      });
+
+      if (!filtered.length) { el.innerHTML = '<div class="empty-msg">기록이 없습니다.</div>'; return; }
+      el.innerHTML = filtered.map(item => {
+        if (item.kind === 'roll') {
+          const color = LOG_TYPE_COLOR['주사위'];
+          return `<div class="log-item roll-entry" style="border-left-color:${color};">
+            <div class="top"><span><span class="who">${escapeHtml(item.author)}</span>${item.character ? ' · ' + escapeHtml(item.character) : ''} · ${escapeHtml(item.time)}</span><span class="log-type-badge" style="background:${color}22; color:${color};">주사위</span></div>
+            <div class="content"><span class="roll-total-big" style="color:${color};">${item.total}</span><span>${escapeHtml(item.notation)} = ${escapeHtml(item.detail)}</span></div>
+          </div>`;
+        }
+        const color = LOG_TYPE_COLOR[item.type] || 'var(--text-muted)';
+        return `<div class="log-item" style="border-left-color:${color};">
+          <div class="top"><span><span class="who">${escapeHtml(item.author)}</span> · ${escapeHtml(item.time)}</span><span class="log-type-badge" style="background:${color}22; color:${color};">${escapeHtml(item.type)}</span></div>
+          <div class="content">${escapeHtml(item.content).replace(/\n/g, '<br>')}</div>
+        </div>`;
+      }).join('');
+    }
+
+    function loadLog() {
+      withHandlers(rows => {
+        lastSessionLogRows = rows;
+        renderActivityFeed();
+      }).getSessionLog(50);
+    }
+
+    // ================= GM 도구 =================
+    function enableGmMode() {
+      localStorage.setItem('trpg_gm_mode', '1');
+      document.getElementById('gm-gate').style.display = 'none';
+      document.getElementById('gm-content').style.display = 'block';
+      loadGameState();
+      loadNpcs();
+    }
+    function disableGmMode() {
+      localStorage.removeItem('trpg_gm_mode');
+      document.getElementById('gm-gate').style.display = 'block';
+      document.getElementById('gm-content').style.display = 'none';
+    }
+
+    function loadGameState() {
+      withHandlers(state => {
+        document.getElementById('gs-scene').value = state['현재씬'] || '';
+        document.getElementById('gs-round').value = state['라운드'] || 0;
+        document.getElementById('gs-notice').value = state['공지'] || '';
+        document.getElementById('gs-next').value = state['다음세션일정'] || '';
+        try { combatants = state['전투순서'] ? JSON.parse(state['전투순서']) : []; } catch (e) { combatants = []; }
+        currentTurnId = state['현재턴'] || null;
+        renderInitiative();
+      }).getGameState();
+    }
+
+    function saveGameState() {
+      const entries = [
+        ['현재씬', document.getElementById('gs-scene').value],
+        ['라운드', Number(document.getElementById('gs-round').value) || 0],
+        ['공지', document.getElementById('gs-notice').value],
+        ['다음세션일정', document.getElementById('gs-next').value]
+      ];
+      let remaining = entries.length;
+      entries.forEach(([k, v]) => {
+        withHandlers(() => { remaining--; if (remaining === 0) toast('게임 상태를 저장했습니다.'); }).setGameState(k, v);
+      });
+    }
+
+    function adjustRound(delta) {
+      const el = document.getElementById('gs-round');
+      el.value = Math.max(0, (Number(el.value) || 0) + delta);
+    }
+    function persistRoundOnly() {
+      withHandlers(() => {}).setGameState('라운드', Number(document.getElementById('gs-round').value) || 0);
+    }
+
+    // ---------- 전투 순서 (Foundry 스타일 이니셔티브 트래커) ----------
+    function populateInitiativeOptions() {
+      const dl = document.getElementById('init-name-options');
+      const names = [...characters.map(c => c['캐릭터명']), ...npcs.map(n => n['이름'])].filter(Boolean);
+      dl.innerHTML = names.map(n => `<option value="${escapeAttr(n)}"></option>`).join('');
+    }
+
+    function persistInitiative() {
+      withHandlers(() => {}).setGameState('전투순서', JSON.stringify(combatants));
+      withHandlers(() => {}).setGameState('현재턴', currentTurnId || '');
+    }
+
+    function addCombatant() {
+      const name = document.getElementById('init-name').value.trim();
+      const score = Number(document.getElementById('init-score').value);
+      if (!name) { toast('이름을 입력하세요.'); return; }
+      const id = 'i' + Date.now() + Math.floor(Math.random() * 1000);
+      combatants.push({ id, name, score: isNaN(score) ? 0 : score });
+      if (!currentTurnId) currentTurnId = id;
+      document.getElementById('init-name').value = '';
+      document.getElementById('init-score').value = '';
+      persistInitiative();
+      renderInitiative();
+    }
+
+    function removeCombatant(id) {
+      combatants = combatants.filter(c => c.id !== id);
+      if (currentTurnId === id) currentTurnId = combatants.length ? combatants[0].id : null;
+      persistInitiative();
+      renderInitiative();
+    }
+
+    function sortedCombatants() {
+      return [...combatants].sort((a, b) => b.score - a.score);
+    }
+
+    function nextTurn() {
+      const sorted = sortedCombatants();
+      if (!sorted.length) { toast('전투 순서에 참가자를 추가하세요.'); return; }
+      const idx = sorted.findIndex(c => c.id === currentTurnId);
+      const nextIdx = (idx + 1) % sorted.length;
+      if (nextIdx === 0) {
+        const roundEl = document.getElementById('gs-round');
+        roundEl.value = (Number(roundEl.value) || 0) + 1;
+        persistRoundOnly();
+      }
+      currentTurnId = sorted[nextIdx].id;
+      persistInitiative();
+      renderInitiative();
+    }
+
+    function clearInitiative() {
+      if (combatants.length && !confirm('전투 순서를 모두 초기화할까요?')) return;
+      combatants = [];
+      currentTurnId = null;
+      persistInitiative();
+      renderInitiative();
+    }
+
+    function renderInitiative() {
+      const el = document.getElementById('init-list');
+      const sorted = sortedCombatants();
+      if (!sorted.length) { el.innerHTML = '<div class="empty-msg">전투 순서가 비어 있습니다. 이름과 선제값을 입력해 추가하세요.</div>'; return; }
+      el.innerHTML = sorted.map(c => {
+        const isCurrent = c.id === currentTurnId;
+        return `<div class="init-row${isCurrent ? ' current' : ''}">
+          <div class="init-score">${c.score}</div>
+          <div class="init-name">${escapeHtml(c.name)}${isCurrent ? '<div class="init-turn-label">현재 턴</div>' : ''}</div>
+          <button class="btn secondary small" onclick="removeCombatant('${c.id}')">제거</button>
+        </div>`;
+      }).join('');
+    }
+
+    // ---------- NPC / 몬스터 ----------
+    function renderNpcList() {
+      const el = document.getElementById('npc-list');
+      const q = (document.getElementById('npc-search').value || '').toLowerCase().trim();
+      const filtered = npcs.filter(n => !q || String(n['이름']||'').toLowerCase().includes(q));
+      if (!npcs.length) { el.innerHTML = '<div class="empty-msg">등록된 NPC/몬스터가 없습니다.</div>'; return; }
+      if (!filtered.length) { el.innerHTML = '<div class="empty-msg">검색 결과가 없습니다.</div>'; return; }
+      el.innerHTML = filtered.map(n => {
+        const color = NPC_TYPE_COLOR[n['종류']] || CATEGORICAL_HEX[0];
+        const initials = String(n['이름'] || '?').trim().slice(0, 2);
+        const textColor = textColorFor(color);
+        return `<div class="list-item" data-id="${n.ID}" onclick="selectNpc('${n.ID}')">
+          <div class="avatar" style="background:${color}; color:${textColor};">${escapeHtml(initials)}</div>
+          <div class="li-body">
+            <div class="li-top">
+              <span class="li-name">${escapeHtml(n['이름'] || '(이름 없음)')}</span>
+              <span class="pill" style="background:${color}22; color:${color};">${escapeHtml(n['종류'] || 'NPC')}</span>
+            </div>
+            ${renderHpMeter(n['현재HP'], n['최대HP'])}
+            ${renderSpecStrip(n['스탯(JSON)'])}
+          </div>
+        </div>`;
+      }).join('');
+      if (selectedNpcId) {
+        const node = el.querySelector(`[data-id="${selectedNpcId}"]`);
+        if (node) node.classList.add('selected');
+      }
+    }
+
+    function loadNpcs(preserveSelection, isPoll) {
+      withHandlers(list => {
+        npcs = list;
+        renderNpcList();
+        populateInitiativeOptions();
+        if (isPoll) flashChangedCards(document.getElementById('npc-list'), prevNpcHp, list, 'ID', '현재HP');
+        else list.forEach(n => prevNpcHp[n.ID] = Number(n['현재HP']));
+        if (preserveSelection && selectedNpcId) {
+          const still = npcs.find(n => n.ID === selectedNpcId);
+          if (still) fillNpcForm(still); else newNpc();
+        }
+      }).getNPCs();
+    }
+
+    function selectNpc(id) {
+      selectedNpcId = id;
+      const n = npcs.find(x => x.ID === id);
+      if (n) fillNpcForm(n);
+      renderNpcList();
+    }
+
+    function fillNpcForm(n) {
+      document.getElementById('n-ID').value = n.ID || '';
+      document.getElementById('n-name').value = n['이름'] || '';
+      document.getElementById('n-type').value = n['종류'] || 'NPC';
+      document.getElementById('n-hp').value = n['현재HP'] || 0;
+      document.getElementById('n-maxhp').value = n['최대HP'] || 0;
+      document.getElementById('n-stats').value = n['스탯(JSON)'] || '';
+      document.getElementById('n-desc').value = n['설명'] || '';
+      document.getElementById('n-memo').value = n['메모'] || '';
+    }
+
+    function newNpc() {
+      selectedNpcId = null;
+      document.getElementById('n-ID').value = '';
+      ['n-name','n-stats','n-desc','n-memo'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('n-type').value = 'NPC';
+      document.getElementById('n-hp').value = 10;
+      document.getElementById('n-maxhp').value = 10;
+      renderNpcList();
+    }
+
+    function saveNpc() {
+      const npc = {
+        ID: document.getElementById('n-ID').value || null,
+        '이름': document.getElementById('n-name').value,
+        '종류': document.getElementById('n-type').value,
+        '현재HP': Number(document.getElementById('n-hp').value) || 0,
+        '최대HP': Number(document.getElementById('n-maxhp').value) || 0,
+        '스탯(JSON)': document.getElementById('n-stats').value,
+        '설명': document.getElementById('n-desc').value,
+        '메모': document.getElementById('n-memo').value
+      };
+      if (!npc['이름']) { toast('이름을 입력하세요.'); return; }
+      withHandlers(saved => {
+        selectedNpcId = saved.ID;
+        toast('저장했습니다.');
+        loadNpcs(true);
+      }).upsertNPC(npc);
+    }
+
+    function removeNpc() {
+      const id = document.getElementById('n-ID').value;
+      if (!id) { toast('저장된 항목이 아닙니다.'); return; }
+      if (!confirm('삭제할까요?')) return;
+      withHandlers(() => {
+        toast('삭제했습니다.');
+        selectedNpcId = null;
+        newNpc();
+        loadNpcs(false);
+      }).deleteNPC(id);
+    }
+
+    function quickNpcHp(delta) {
+      const id = document.getElementById('n-ID').value;
+      if (!id) {
+        const cur = Number(document.getElementById('n-hp').value) || 0;
+        document.getElementById('n-hp').value = Math.max(0, cur + delta);
+        return;
+      }
+      withHandlers(newHp => {
+        document.getElementById('n-hp').value = newHp;
+        loadNpcs(true);
+      }).adjustNpcHP(id, delta);
+    }
+
+    // ---------- 유틸 ----------
+    function escapeHtml(str) {
+      if (str === undefined || str === null) return '';
+      return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+    }
+    function escapeAttr(str) { return escapeHtml(str); }
+
+    // ================= 솔로 플레이: 데이터 (D&D 기반 캐릭터 생성 + 원샷 시나리오) =================
+    const ABILITY_LABELS = { STR: '근력', DEX: '민첩', CON: '건강', INT: '지능', WIS: '지혜', CHA: '매력' };
+    const ABILITY_ORDER = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'];
+    const POINT_BUY_COST = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 };
+    const POINT_BUY_TOTAL = 27;
+
+    const SOLO_RACES = [
+      { id: 'human', name: '인간', tagline: '어디에나 적응하는 다재다능함', desc: '가장 널리 퍼진 종족. 특출난 재능은 없지만 어떤 삶의 방식에도 빠르게 적응한다.', trait: '모든 상황에 무난하게 어울림' },
+      { id: 'elf', name: '엘프', tagline: '숲과 달빛 아래에서 나고 자란 종족', desc: '수백 년을 사는 우아한 종족으로 감각이 예민하고 잠을 거의 자지 않는다.', trait: '암시야, 예민한 감각' },
+      { id: 'half-elf', name: '하프엘프', tagline: '두 세계 사이에 선 존재', desc: '인간과 엘프 양쪽의 특징을 물려받아 사교성과 적응력이 뛰어나다.', trait: '암시야, 뛰어난 사교성' },
+      { id: 'dwarf', name: '드워프', tagline: '산과 대장간의 후예', desc: '단단한 체구와 고집스러운 인내심을 지닌 종족. 돌과 금속을 다루는 데 능하다.', trait: '암시야, 독에 대한 저항' },
+      { id: 'halfling', name: '하플링', tagline: '작지만 대담한 방랑자', desc: '작은 몸집에도 불구하고 위험을 두려워하지 않는 낙천적인 종족.', trait: '작은 체구, 행운의 가호' },
+      { id: 'gnome', name: '노움', tagline: '호기심 많은 발명가', desc: '끝없는 호기심과 장난기로 가득한 종족. 마법과 기계장치를 사랑한다.', trait: '암시야, 마법에 대한 저항' },
+      { id: 'tiefling', name: '티플링', tagline: '먼 조상의 낙인을 지닌 자', desc: '악마의 피가 섞인 혈통 탓에 뿔과 꼬리를 지니고 태어나며, 세상의 편견 속에서 강해졌다.', trait: '암시야, 화염 저항' },
+      { id: 'half-orc', name: '하프오크', tagline: '두 혈통 사이의 힘', desc: '오크의 강인함과 인간의 끈기를 함께 물려받았다. 전장에서 쉽게 물러서지 않는다.', trait: '기절 직전에도 버티는 강인함' }
+    ];
+
+    const SOLO_CLASSES = [
+      { id: 'fighter', name: '전사', tagline: '검과 방패를 다루는 전장의 중심', desc: '다양한 무기와 갑옷에 통달한 만능 전투 전문가.', primaryAbility: 'STR', hitDie: 10 },
+      { id: 'wizard', name: '위저드', tagline: '책과 주문으로 세계를 읽는 자', desc: '방대한 지식을 바탕으로 강력한 주문을 다루는 학자형 마법사.', primaryAbility: 'INT', hitDie: 6 },
+      { id: 'rogue', name: '도적', tagline: '그림자 속에서 기회를 노리는 자', desc: '은신과 손재주에 능하며 결정적인 순간 치명적인 일격을 가한다.', primaryAbility: 'DEX', hitDie: 8 },
+      { id: 'cleric', name: '성직자', tagline: '신의 뜻을 대리하는 치유자', desc: '신성한 힘으로 동료를 치유하고 적을 심판하는 성스러운 전사.', primaryAbility: 'WIS', hitDie: 8 },
+      { id: 'ranger', name: '레인저', tagline: '황야를 읽어내는 추적자', desc: '자연과 하나 되어 활과 감각으로 사냥감을 쫓는 전문가.', primaryAbility: 'DEX', hitDie: 10 },
+      { id: 'barbarian', name: '바바리안', tagline: '분노로 타오르는 원시의 전사', desc: '억누를 수 없는 분노를 힘으로 바꾸는 야성의 전사.', primaryAbility: 'STR', hitDie: 12 },
+      { id: 'bard', name: '바드', tagline: '이야기와 노래로 마법을 엮는 자', desc: '언변과 예술로 마법을 부리며 동료를 고무시키는 만능 재주꾼.', primaryAbility: 'CHA', hitDie: 8 },
+      { id: 'warlock', name: '워록', tagline: '알 수 없는 존재와 계약한 자', desc: '초월적 존재와의 계약으로 얻은 어둡고 신비한 힘을 다룬다.', primaryAbility: 'CHA', hitDie: 8 }
+    ];
+
+    const SOLO_BACKGROUNDS = [
+      { id: 'soldier', name: '군인', tagline: '전장에서 단련된 자', desc: '정규군이나 용병으로 복무하며 규율과 전투를 몸에 익혔다.', skillFlavor: '운동, 위협에 능숙', gold: 10 },
+      { id: 'sage', name: '현자', tagline: '지식을 좇아 평생을 바친 학자', desc: '오래된 서고와 학당에서 지식을 탐구해온 연구자.', skillFlavor: '역사, 조사에 능숙', gold: 10 },
+      { id: 'criminal', name: '범죄자', tagline: '법의 그늘에서 살아온 자', desc: '뒷골목의 생리를 잘 알고, 위험한 거래에도 익숙하다.', skillFlavor: '은신, 기만에 능숙', gold: 15 },
+      { id: 'folk-hero', name: '민중영웅', tagline: '평범한 이들의 희망이 된 자', desc: '고향을 위기에서 구해낸 뒤로 사람들의 존경을 받고 있다.', skillFlavor: '생존, 동물 조련에 능숙', gold: 10 },
+      { id: 'acolyte', name: '신도', tagline: '신전에서 자란 헌신자', desc: '어릴 때부터 신전에 몸담으며 의식과 교리를 익혔다.', skillFlavor: '통찰, 종교에 능숙', gold: 5 },
+      { id: 'noble', name: '귀족', tagline: '권력과 예법 속에서 자란 자', desc: '가문의 이름을 등에 업고 자랐으나, 지금은 홀로 길 위에 섰다.', skillFlavor: '역사, 설득에 능숙', gold: 25 },
+      { id: 'entertainer', name: '연예인', tagline: '무대 위에서 살아온 자', desc: '노래와 이야기로 사람들의 마음을 사로잡아온 떠돌이 예인.', skillFlavor: '곡예, 공연에 능숙', gold: 15 },
+      { id: 'outlander', name: '외지인', tagline: '황야에서 나고 자란 방랑자', desc: '문명과 동떨어진 곳에서 살아남는 법을 몸으로 배웠다.', skillFlavor: '생존, 운동에 능숙', gold: 10 }
+    ];
+
+    const APPEARANCE_BUILD = ['호리호리한', '다부진', '건장한', '땅딸막한', '늘씬한'];
+    const APPEARANCE_HAIR = ['짧은 머리', '긴 머리', '땋은 머리', '삭발', '헝클어진 머리'];
+    const APPEARANCE_MARK = ['왼쪽 뺨의 흉터', '팔에 새긴 문신', '이색 눈동자', '희끗한 새치', '오래된 목걸이'];
+
+    // type: narration(내레이션+선택지) / check(능력 판정 분기) / combat(간이 전투) / ending(결말) / ending_router(조건부 결말 분기)
+    const SOLO_SCENARIO = {
+      id: 'misty-forest-v1',
+      title: '안개 낀 숲',
+      startNode: 'n1_start',
+      nodes: {
+        n1_start: {
+          type: 'narration', title: '숲의 초입',
+          text: '해가 저물기 시작할 무렵, 당신은 안개가 낮게 깔린 숲 앞에 선다. 사흘 전 이 길을 지난 상단이 아직 마을에 도착하지 않았다는 소문을 듣고 나선 참이다. 나무 사이로 희미한 빛이 일렁이는 것이 보인다.',
+          choices: [
+            { label: '숲 가장자리를 따라 조용히 정찰한다', next: 'n2_scout_check' },
+            { label: '망설임 없이 곧장 숲 안으로 들어간다', next: 'n2_direct' }
+          ]
+        },
+        n2_scout_check: {
+          type: 'check', title: '조용한 정찰',
+          text: '나무 그림자에 몸을 숨기며 조심스럽게 숲의 가장자리를 살핀다.',
+          ability: 'DEX', dc: 12,
+          successText: '수풀 너머로 고블린 두엇이 매복해 있는 것이 보인다. 당신은 들키지 않고 그들의 위치를 파악했다.',
+          failText: '낙엽을 밟는 소리에 매복해 있던 고블린이 고개를 든다. 들켰다.',
+          successNext: 'n3_ambush_avoided', failNext: 'n_combat_goblin', failFlag: 'goblin_surprised_player'
+        },
+        n2_direct: {
+          type: 'narration', title: '거침없는 발걸음',
+          text: '망설이지 않고 안개 속으로 걸어 들어간다. 몇 걸음 지나지 않아 발밑에서 마른 나뭇가지가 부러지는 소리가 크게 울린다. 수풀이 부스럭거린다.',
+          choices: [ { label: '무기를 꺼내 든다', next: 'n_combat_goblin' } ]
+        },
+        n3_ambush_avoided: {
+          type: 'narration', title: '매복을 피하다',
+          text: '당신은 고블린들이 눈치채기 전에 조용히 그들을 지나쳐, 숲 더 깊은 곳으로 이어지는 오솔길을 찾아낸다.',
+          choices: [ { label: '오솔길을 따라 계속 나아간다', next: 'n4_path' } ]
+        },
+        n_combat_goblin: {
+          type: 'combat', title: '고블린 정찰병',
+          text: '고블린 정찰병이 녹슨 단검을 들고 달려든다.',
+          surpriseTextFlag: 'goblin_surprised_player', surpriseText: '방심한 틈에 고블린의 첫 공격이 먼저 날아든다.',
+          enemy: { name: '고블린 정찰병', maxHp: 7, ac: 13, atkBonus: 4, dmgDice: '1d6+2' },
+          winNext: 'n4_path', winFlag: 'goblin_defeated', loseNext: 'n_end_defeat'
+        },
+        n4_path: {
+          type: 'narration', title: '갈림길',
+          text: '길이 둘로 갈라진다. 한쪽은 이끼로 뒤덮인 오래된 돌다리이고, 다른 한쪽은 커다란 고목의 속이 텅 빈 밑동으로 이어지는 좁은 굴이다. 다리 너머로 푸르스름한 빛 몇 점이 홀린 듯 떠다닌다.',
+          choices: [
+            { label: '돌다리를 건넌다 (의문의 빛이 유혹하듯 흔들린다)', next: 'n5_bridge_check' },
+            { label: '고목의 굴로 몸을 욱여넣는다', next: 'n5_tunnel_check' }
+          ]
+        },
+        n5_bridge_check: {
+          type: 'check', title: '도깨비불의 유혹',
+          text: '다리를 건너는 동안 푸른 빛들이 눈앞에서 아른거리며 발걸음을 다른 방향으로 이끌려 한다. 정신을 붙잡아야 한다.',
+          ability: 'WIS', dc: 13,
+          successText: '빛의 유혹을 뿌리치고 무사히 다리를 건넌다. 다리 난간에 누군가 떨어뜨린 낡은 랜턴이 걸려 있다. 챙겨 넣는다.',
+          failText: '홀린 듯 길을 벗어나 발밑의 늪에 빠진다. 진흙을 헤치고 나오느라 온몸에 상처가 남는다.',
+          successNext: 'n7_grove', successFlag: 'lantern', failNext: 'n6_bridge_bog'
+        },
+        n6_bridge_bog: {
+          type: 'narration', title: '늪에서 빠져나오다',
+          text: '가까스로 늪에서 몸을 빼내지만, 날카로운 것에 긁힌 상처에서 피가 배어 나온다.',
+          damage: '1d6',
+          choices: [ { label: '숨을 고르고 계속 나아간다', next: 'n7_grove' } ]
+        },
+        n5_tunnel_check: {
+          type: 'check', title: '좁은 굴',
+          text: '고목의 밑동은 생각보다 훨씬 비좁다. 몸을 잔뜩 웅크려야 겨우 지나갈 수 있을 것 같다.',
+          ability: 'STR', dc: 11,
+          successText: '몸을 낮춰 매끄럽게 굴을 통과한다.',
+          failText: '중간에 몸이 끼어 한참을 버둥거린 끝에 간신히 빠져나온다. 나뭇가지에 긁혀 상처를 입었다.',
+          successNext: 'n7_grove', failNext: 'n6_tunnel_stuck'
+        },
+        n6_tunnel_stuck: {
+          type: 'narration', title: '가까스로 빠져나오다',
+          text: '옷이 찢기고 살갗이 긁힌 채로 굴 반대편에 널브러진다.',
+          damage: '1d4',
+          choices: [ { label: '몸을 추스르고 계속 나아간다', next: 'n7_grove' } ]
+        },
+        n7_grove: {
+          type: 'narration', title: '달빛 아래 공터',
+          text: '나무들이 둥글게 둘러싼 공터에 다다른다. 한 상인이 나무에 묶인 채 정신을 잃어 있고, 그 앞에서 후드를 눌러쓴 인물이 낮은 목소리로 알 수 없는 의식을 읊고 있다.',
+          choices: [
+            { label: '그림자에 몸을 숨기고 다가가 밧줄부터 끊는다', next: 'n8_sneak_check' },
+            { label: '정면으로 나서서 상대의 정신을 흩트린다', next: 'n8_confront_check' },
+            { label: '망설이지 않고 곧바로 달려든다', next: 'n_combat_cultist' }
+          ]
+        },
+        n8_sneak_check: {
+          type: 'check', title: '은밀한 접근',
+          text: '나무 그림자를 따라 소리 없이 다가간다.',
+          ability: 'DEX', dc: 14,
+          successText: '들키지 않고 등 뒤까지 접근하는 데 성공한다. 선제 공격의 기회를 잡았다.',
+          failText: '마른 잎을 밟는 소리에 후드를 쓴 자가 홱 돌아본다.',
+          successNext: 'n_combat_cultist', successFlag: 'player_ambush_cultist', failNext: 'n_combat_cultist'
+        },
+        n8_confront_check: {
+          type: 'check', title: '기 싸움',
+          text: '정체를 밝히며 당당히 걸어 나가, 의식을 멈추라 요구한다.',
+          ability: 'CHA', dc: 13,
+          successText: '흔들림 없는 목소리에 상대가 순간 움찔하며 의식이 흐트러진다.',
+          failText: '상대는 코웃음을 치며 곧장 지팡이를 겨눈다.',
+          successNext: 'n_combat_cultist', successFlag: 'player_ambush_cultist', failNext: 'n_combat_cultist'
+        },
+        n_combat_cultist: {
+          type: 'combat', title: '의식을 치르던 자',
+          text: '후드를 쓴 광신도가 당신을 향해 지팡이 끝의 불꽃을 겨눈다.',
+          surpriseTextFlag: 'player_ambush_cultist', surpriseText: '상대가 반응하기도 전에 당신의 일격이 먼저 꽂힌다.',
+          enemy: { name: '의식을 치르던 자', maxHp: 11, ac: 12, atkBonus: 3, dmgDice: '1d6+1' },
+          winNext: 'n10_freed', winFlag: 'merchant_saved', loseNext: 'n_end_defeat'
+        },
+        n10_freed: {
+          type: 'narration', title: '풀려난 상인',
+          text: '광신도가 쓰러지자 상인이 정신을 차린다. 이름은 니콜, 사라진 상단의 마지막 생존자라고 자신을 소개한다. "그들은... 숲 더 깊은 곳에 뭔가를 숭배하고 있었어요." 그녀가 떨리는 목소리로 말한다.',
+          choices: [
+            { label: '니콜을 데리고 안전하게 마을로 돌아간다', next: 'n_end_safe' },
+            { label: '니콜을 먼저 대피시키고 홀로 숲 더 깊은 곳을 살핀다', next: 'n11_deeper' }
+          ]
+        },
+        n11_deeper: {
+          type: 'narration', title: '더 깊은 곳으로',
+          text: '니콜을 숲 밖 오솔길로 이끈 뒤, 홀로 발길을 돌려 안개가 가장 짙은 방향으로 향한다.',
+          choices: [ { label: '어둠 속으로 걸어 들어간다', next: 'n_end_branch' } ]
+        },
+        n_end_branch: { type: 'ending_router' },
+        n_end_safe: {
+          type: 'ending', outcome: 'good', title: '무사 귀환',
+          text: '니콜을 마을까지 무사히 데려다준다. 상단이 있는 곳까지 다 밝혀내지는 못했지만, 적어도 한 사람의 목숨은 구했다. 여관에 돌아와 언 몸을 녹이며, 다음에는 더 깊은 곳까지 가보리라 다짐한다.'
+        },
+        n_end_hero: {
+          type: 'ending', outcome: 'best', title: '숲의 진실을 밝히다',
+          text: '랜턴 불빛에 의지해 안개 속을 헤치자, 버려진 사당과 그 아래 도사린 의식의 흔적이 드러난다. 당신은 실종된 상단의 물건들과 의식의 배후를 알려줄 증거를 손에 넣는다. 마을로 돌아온 당신을 사람들은 숲의 진실을 밝혀낸 자로 기억할 것이다.'
+        },
+        n_end_risky: {
+          type: 'ending', outcome: 'ambiguous', title: '안개 속으로',
+          text: '랜턴도 없이 짙은 안개 속을 더듬어 나아가던 당신은 이내 방향을 잃고 만다. 멀리서 나지막한 성가가 들려오지만, 그 근원까지는 다다르지 못한 채 밤이 저문다. 이 숲의 진짜 비밀은 다음 기회로 남겨두어야 할 것 같다.'
+        },
+        n_end_defeat: {
+          type: 'ending', outcome: 'bad', title: '쓰러지다',
+          text: '눈앞이 흐려지고 다리에 힘이 풀린다. 의식을 잃기 직전, 멀리서 발소리가 다가오는 것을 느낀다... 다행히 지나가던 사냥꾼에게 발견되어 목숨은 건졌지만, 이번 탐색은 여기서 끝이다.'
+        }
+      }
+    };
+    const ENDING_LABEL = { good: '좋은 결말', best: '최고의 결말', ambiguous: '여운이 남는 결말', bad: '패배' };
+
+    function abilityMod(score) { return Math.floor((Number(score) - 10) / 2); }
+    function fmtMod(mod) { return mod >= 0 ? '+' + mod : String(mod); }
+
+    // ================= 솔로 플레이: 상태 =================
+    let soloCharacters = [];
+    let soloWizard = null; // { step, race, klass, background, abilities:{}, name, build, hair, marks:[] }
+    let soloPlay = null;   // { charId, char, node, flags:{}, log:[], combat:null }
+    const WIZARD_STEPS = [
+      { key: 'race', label: '종족' },
+      { key: 'class', label: '클래스' },
+      { key: 'background', label: '배경' },
+      { key: 'abilities', label: '능력치' },
+      { key: 'identity', label: '이름·외형' },
+      { key: 'summary', label: '확인' }
+    ];
+
+    function setSoloView(view) {
+      document.querySelectorAll('.solo-view').forEach(v => v.classList.remove('active'));
+      document.getElementById('solo-view-' + view).classList.add('active');
+    }
+
+    // ---------------- 목록 ----------------
+    function loadSoloCharacters() {
+      withHandlers(list => {
+        soloCharacters = Array.isArray(list) ? list : [];
+        renderSoloCharList();
+      }, err => {
+        console.error('솔로 캐릭터 목록을 불러오지 못했습니다:', err);
+      }).getSoloCharacters();
+    }
+
+    function renderSoloCharList() {
+      const el = document.getElementById('solo-char-list');
+      if (!soloCharacters.length) {
+        el.innerHTML = '<div class="empty-msg">아직 만든 모험가가 없습니다.<br>위의 "새 모험가 만들기"로 시작해보세요.</div>';
+        return;
+      }
+      // 시트를 수동으로 편집한 경우 등, 특정 행 하나의 데이터가 이상해도(예: 숫자로만 된 이름)
+      // 그 한 행 때문에 map() 전체가 예외로 죽어 목록 전체가 안 보이는 일이 없도록 행 단위로 감싼다.
+      const cards = [];
+      soloCharacters.forEach((c, idx) => {
+        try {
+          const color = colorForClass(c['클래스']);
+          const initials = String(c['캐릭터명'] || '?').trim().slice(0, 2);
+          const textColor = textColorFor(color);
+          cards.push(`<div class="list-item solo-char-card">
+          <div class="avatar" style="background:${color}; color:${textColor};">${escapeHtml(initials)}</div>
+          <div class="solo-char-info">
+            <div class="li-top">
+              <span class="li-name">${escapeHtml(c['캐릭터명'] || '(이름 없음)')}</span>
+            </div>
+            <div class="li-meta">${escapeHtml(c['종족'] || '')} · ${escapeHtml(c['클래스'] || '')}</div>
+            ${renderHpMeter(c['현재HP'], c['최대HP'])}
+            <div class="solo-char-tags">
+              <span class="pill" style="background:${color}22; color:${color};">${escapeHtml(c['배경'] || '')}</span>
+            </div>
+          </div>
+          <div class="solo-char-actions">
+            <button class="btn small" onclick="enterSoloPlay('${c.ID}')">모험 시작</button>
+            <button class="btn secondary small" onclick="deleteSoloCharacterUI('${c.ID}')">삭제</button>
+          </div>
+        </div>`);
+        } catch (e) {
+          console.error('솔로 캐릭터 카드 렌더링 실패 (index ' + idx + '):', c, e);
+        }
+      });
+      el.innerHTML = cards.length ? cards.join('') : '<div class="empty-msg">캐릭터 데이터를 표시하는 중 문제가 발생했습니다.<br>브라우저 콘솔(F12)의 오류 메시지를 확인해주세요.</div>';
+    }
+
+    function deleteSoloCharacterUI(id) {
+      if (!confirm('이 모험가를 삭제할까요? 진행 상황도 함께 사라집니다.')) return;
+      withHandlers(() => { toast('삭제했습니다.'); loadSoloCharacters(); }).deleteSoloCharacter(id);
+    }
+
+    // ---------------- 위저드 ----------------
+    function startSoloWizard() {
+      soloWizard = { step: 0, race: null, klass: null, background: null,
+        abilities: { STR: 8, DEX: 8, CON: 8, INT: 8, WIS: 8, CHA: 8 },
+        name: '', build: APPEARANCE_BUILD[0], hair: APPEARANCE_HAIR[0], marks: [] };
+      setSoloView('wizard');
+      renderWizard();
+    }
+
+    function renderWizard() {
+      const stepsEl = document.getElementById('wizard-steps');
+      stepsEl.innerHTML = WIZARD_STEPS.map((s, i) => {
+        const cls = i === soloWizard.step ? 'current' : (i < soloWizard.step ? 'done' : '');
+        return `<div class="wizard-step ${cls}"><span class="num">${i < soloWizard.step ? '✓' : (i + 1)}</span>${s.label}</div>`;
+      }).join('');
+      const key = WIZARD_STEPS[soloWizard.step].key;
+      const renderers = { race: renderRaceStep, class: renderClassStep, background: renderBackgroundStep, abilities: renderAbilitiesStep, identity: renderIdentityStep, summary: renderSummaryStep };
+      document.getElementById('wizard-step-content').innerHTML = renderers[key]();
+      document.getElementById('wizard-back-btn').textContent = soloWizard.step === 0 ? '취소' : '이전';
+      document.getElementById('wizard-next-btn').textContent = key === 'summary' ? '모험 시작하기' : '다음';
+    }
+
+    function optionCard(item, groupField, tagline) {
+      const selected = soloWizard[groupField] === item.id;
+      return `<div class="option-card${selected ? ' selected' : ''}" onclick="selectWizardOption('${groupField}','${item.id}')">
+        <div class="oc-name">${escapeHtml(item.name)}<span class="oc-check">${selected ? '✓' : ''}</span></div>
+        <div class="oc-tagline">${escapeHtml(item.tagline)}</div>
+        <div class="oc-desc">${escapeHtml(item.desc)}</div>
+        ${tagline ? `<div class="oc-trait pill" style="background:var(--cat-1)22; color:var(--cat-1);">${escapeHtml(tagline)}</div>` : ''}
+      </div>`;
+    }
+    function selectWizardOption(groupField, id) {
+      soloWizard[groupField] = id;
+      renderWizard();
+    }
+
+    function renderRaceStep() {
+      return `<div class="wizard-step-title">종족을 선택하세요</div>
+        <div class="wizard-step-sub">종족은 모험가의 배경과 세계관 속 위치를 결정합니다.</div>
+        <div class="option-grid">${SOLO_RACES.map(r => optionCard(r, 'race', r.trait)).join('')}</div>`;
+    }
+    function renderClassStep() {
+      return `<div class="wizard-step-title">클래스를 선택하세요</div>
+        <div class="wizard-step-sub">클래스는 전투 방식과 핵심 능력치를 결정합니다.</div>
+        <div class="option-grid">${SOLO_CLASSES.map(c => optionCard(c, 'klass', ABILITY_LABELS[c.primaryAbility] + ' 중심 · 히트다이스 d' + c.hitDie)).join('')}</div>`;
+    }
+    function renderBackgroundStep() {
+      return `<div class="wizard-step-title">배경을 선택하세요</div>
+        <div class="wizard-step-sub">배경은 모험을 떠나기 전까지의 삶과 특기를 보여줍니다.</div>
+        <div class="option-grid">${SOLO_BACKGROUNDS.map(b => optionCard(b, 'background', b.skillFlavor)).join('')}</div>`;
+    }
+
+    function pointBuySpent() {
+      return ABILITY_ORDER.reduce((sum, k) => sum + (POINT_BUY_COST[soloWizard.abilities[k]] || 0), 0);
+    }
+    function renderAbilitiesStep() {
+      const spent = pointBuySpent();
+      const remaining = POINT_BUY_TOTAL - spent;
+      const klass = SOLO_CLASSES.find(c => c.id === soloWizard.klass);
+      const remCls = remaining === 0 ? 'zero' : (remaining < 0 ? 'over' : '');
+      return `<div class="wizard-step-title">능력치를 배분하세요</div>
+        <div class="wizard-step-sub">포인트 바이 방식입니다 (총 ${POINT_BUY_TOTAL}점, 각 능력치 8~15).</div>
+        <div class="pointbuy-remaining"><span>남은 포인트</span><span class="num ${remCls}">${remaining}</span></div>
+        <div class="ability-grid">${ABILITY_ORDER.map(k => {
+          const score = soloWizard.abilities[k];
+          const mod = abilityMod(score);
+          const isPrimary = klass && klass.primaryAbility === k;
+          const nextCost = score < 15 ? POINT_BUY_COST[score + 1] - POINT_BUY_COST[score] : Infinity;
+          const canInc = score < 15 && (remaining - nextCost) >= 0;
+          const canDec = score > 8;
+          return `<div class="ability-box${isPrimary ? ' primary' : ''}">
+            <div class="ab-label">${ABILITY_LABELS[k]}${isPrimary ? ' (주력)' : ''}</div>
+            <div class="ab-stepper">
+              <button onclick="adjustAbility('${k}',-1)" ${canDec ? '' : 'disabled'}>−</button>
+              <span class="ab-score">${score}</span>
+              <button onclick="adjustAbility('${k}',1)" ${canInc ? '' : 'disabled'}>+</button>
+            </div>
+            <div class="ab-mod">수정치 ${fmtMod(mod)}</div>
+          </div>`;
+        }).join('')}</div>`;
+    }
+    function adjustAbility(key, dir) {
+      const cur = soloWizard.abilities[key];
+      const next = cur + dir;
+      if (next < 8 || next > 15) return;
+      if (dir > 0) {
+        const cost = POINT_BUY_COST[next] - POINT_BUY_COST[cur];
+        if (pointBuySpent() + cost > POINT_BUY_TOTAL) { toast('남은 포인트가 부족합니다.'); return; }
+      }
+      soloWizard.abilities[key] = next;
+      renderWizard();
+    }
+
+    function renderIdentityStep() {
+      const marksSel = soloWizard.marks;
+      return `<div class="wizard-step-title">이름과 외형을 정하세요</div>
+        <div class="wizard-step-sub">모험가의 이름과 겉모습을 자유롭게 꾸며보세요.</div>
+        <label>이름</label>
+        <input type="text" id="wiz-name" value="${escapeAttr(soloWizard.name)}" oninput="soloWizard.name=this.value" placeholder="모험가의 이름">
+        <div class="appearance-group">
+          <label>체형</label>
+          <div class="chip-row">${APPEARANCE_BUILD.map(v => `<button type="button" class="filter-chip${soloWizard.build === v ? ' active' : ''}" onclick="setAppearance('build','${v}')">${v}</button>`).join('')}</div>
+        </div>
+        <div class="appearance-group">
+          <label>머리 스타일</label>
+          <div class="chip-row">${APPEARANCE_HAIR.map(v => `<button type="button" class="filter-chip${soloWizard.hair === v ? ' active' : ''}" onclick="setAppearance('hair','${v}')">${v}</button>`).join('')}</div>
+        </div>
+        <div class="appearance-group">
+          <label>특징 (복수 선택 가능)</label>
+          <div class="chip-row">${APPEARANCE_MARK.map(v => `<button type="button" class="filter-chip${marksSel.includes(v) ? ' active' : ''}" onclick="toggleAppearanceMark('${v}')">${v}</button>`).join('')}</div>
+        </div>`;
+    }
+    function setAppearance(field, value) { soloWizard[field] = value; renderWizard(); }
+    function toggleAppearanceMark(value) {
+      const i = soloWizard.marks.indexOf(value);
+      if (i === -1) soloWizard.marks.push(value); else soloWizard.marks.splice(i, 1);
+      renderWizard();
+    }
+
+    function computeSoloHp() {
+      const klass = SOLO_CLASSES.find(c => c.id === soloWizard.klass);
+      if (!klass) return 10;
+      return Math.max(1, klass.hitDie + abilityMod(soloWizard.abilities.CON));
+    }
+    function appearanceSentence() {
+      const marks = soloWizard.marks.length ? ', ' + soloWizard.marks.join(', ') + '이(가) 있다' : '';
+      return `${soloWizard.build} 체격에 ${soloWizard.hair}${marks}.`;
+    }
+    function renderSummaryStep() {
+      const race = SOLO_RACES.find(r => r.id === soloWizard.race);
+      const klass = SOLO_CLASSES.find(c => c.id === soloWizard.klass);
+      const bg = SOLO_BACKGROUNDS.find(b => b.id === soloWizard.background);
+      const hp = computeSoloHp();
+      const ac = 10 + abilityMod(soloWizard.abilities.DEX);
+      const color = colorForClass(klass ? klass.name : '');
+      return `<div class="wizard-step-title">모험을 떠날 준비가 되었습니다</div>
+        <div class="summary-hero">
+          <div class="avatar" style="background:${color}; color:${textColorFor(color)};">${escapeHtml((soloWizard.name || '?').slice(0, 2))}</div>
+          <div>
+            <div class="sh-name">${escapeHtml(soloWizard.name || '(이름 없음)')}</div>
+            <div class="sh-sub">${race ? escapeHtml(race.name) : '?'} · ${klass ? escapeHtml(klass.name) : '?'} · ${bg ? escapeHtml(bg.name) : '?'}</div>
+          </div>
+        </div>
+        <div class="summary-strip">
+          <div class="summary-item"><div class="v">${hp}</div><div class="l">HP</div></div>
+          <div class="summary-item"><div class="v">${ac}</div><div class="l">AC</div></div>
+          ${ABILITY_ORDER.map(k => `<div class="summary-item"><div class="v">${soloWizard.abilities[k]}</div><div class="l">${k}</div></div>`).join('')}
+        </div>
+        <label>외형</label>
+        <p style="font-size:13px; color:var(--text-secondary); line-height:1.6;">${escapeHtml(appearanceSentence())}</p>
+        <label>배경 특기</label>
+        <p style="font-size:13px; color:var(--text-secondary);">${bg ? escapeHtml(bg.skillFlavor) : ''}</p>`;
+    }
+
+    function wizardBack() {
+      if (soloWizard.step === 0) { soloWizard = null; setSoloView('list'); return; }
+      soloWizard.step--;
+      renderWizard();
+    }
+    function wizardValidateCurrent() {
+      const key = WIZARD_STEPS[soloWizard.step].key;
+      if (key === 'race' && !soloWizard.race) { toast('종족을 선택하세요.'); return false; }
+      if (key === 'class' && !soloWizard.klass) { toast('클래스를 선택하세요.'); return false; }
+      if (key === 'background' && !soloWizard.background) { toast('배경을 선택하세요.'); return false; }
+      if (key === 'abilities' && pointBuySpent() > POINT_BUY_TOTAL) { toast('포인트를 초과했습니다.'); return false; }
+      if (key === 'identity' && !soloWizard.name.trim()) { toast('이름을 입력하세요.'); return false; }
+      return true;
+    }
+    function wizardNext() {
+      if (!wizardValidateCurrent()) return;
+      const key = WIZARD_STEPS[soloWizard.step].key;
+      if (key === 'summary') { finalizeSoloCharacter(); return; }
+      soloWizard.step++;
+      renderWizard();
+    }
+
+    function finalizeSoloCharacter() {
+      const race = SOLO_RACES.find(r => r.id === soloWizard.race);
+      const klass = SOLO_CLASSES.find(c => c.id === soloWizard.klass);
+      const bg = SOLO_BACKGROUNDS.find(b => b.id === soloWizard.background);
+      const hp = computeSoloHp();
+      const char = {
+        ID: null,
+        '캐릭터명': soloWizard.name.trim(),
+        '종족': race ? race.name : '',
+        '클래스': klass ? klass.name : '',
+        '배경': bg ? bg.name : '',
+        '능력치(JSON)': JSON.stringify(soloWizard.abilities),
+        '현재HP': hp,
+        '최대HP': hp,
+        '스킬/특기': bg ? bg.skillFlavor : '',
+        '소지품': '모험가의 배낭, 물통, 여벌 옷',
+        '외형': appearanceSentence(),
+        '골드': bg ? bg.gold : 10
+      };
+      withHandlers(saved => {
+        toast('모험가를 만들었습니다.');
+        soloWizard = null;
+        loadSoloCharactersThen(() => enterSoloPlay(saved.ID));
+      }).upsertSoloCharacter(char);
+    }
+
+    function loadSoloCharactersThen(cb) {
+      withHandlers(list => { soloCharacters = list; renderSoloCharList(); cb(); }).getSoloCharacters();
+    }
+
+    // ---------------- 시나리오 진행 엔진 ----------------
+    function beginSoloPlaySession(charId, char, restored) {
+      // 복원된 진행상태가 있으면 이어서, 없으면 처음부터. lastLoggedNode를 복원된 마지막 노드로
+      // 맞춰두어야 재진입 시 같은 장면 제목이 이야기 기록에 중복으로 쌓이지 않는다.
+      soloPlay = restored && restored.node ? {
+        charId: charId, char: char, node: restored.node, flags: restored.flags || {}, log: restored.log || [],
+        combat: restored.combat || null, lastLoggedNode: restored.node
+      } : {
+        charId: charId, char: char, node: SOLO_SCENARIO.startNode, flags: {}, log: [], combat: null, lastLoggedNode: null
+      };
+      document.getElementById('sc-char-title').textContent = char['캐릭터명'] + ' · ' + SOLO_SCENARIO.title;
+      setSoloView('play');
+      renderStoryLogList();
+      renderScenarioNode();
+    }
+
+    function enterSoloPlay(charId) {
+      const char = soloCharacters.find(c => c.ID === charId);
+      if (!char) { toast('캐릭터를 찾을 수 없습니다.'); return; }
+      withHandlers(progressJson => {
+        let restored = null;
+        if (progressJson) { try { restored = JSON.parse(progressJson); } catch (e) { restored = null; } }
+        beginSoloPlaySession(charId, char, restored);
+      }, () => beginSoloPlaySession(charId, char, null)).getSoloProgress(charId);
+    }
+
+    function persistSoloProgress() {
+      const json = JSON.stringify({ node: soloPlay.node, flags: soloPlay.flags, log: soloPlay.log, combat: soloPlay.combat });
+      withHandlers(() => {}).setSoloProgress(soloPlay.charId, json);
+    }
+
+    function refreshSoloCharHp(newHp) {
+      soloPlay.char['현재HP'] = newHp;
+      const idx = soloCharacters.findIndex(c => c.ID === soloPlay.charId);
+      if (idx !== -1) soloCharacters[idx]['현재HP'] = newHp;
+    }
+
+    function renderStoryLogList() {
+      const el = document.getElementById('story-log-list');
+      el.innerHTML = soloPlay.log.map(t => `<div class="sl-line">${escapeHtml(t)}</div>`).join('');
+    }
+    // 같은 노드를 다시 렌더링할 때(전투 라운드 갱신, 화면 재진입 등) 이야기 기록에 중복으로
+    // 쌓이지 않도록, 노드가 실제로 "새로" 바뀌었을 때만 한 번 기록한다.
+    function appendStoryLogOnce(title) {
+      if (soloPlay.lastLoggedNode === soloPlay.node) return;
+      soloPlay.lastLoggedNode = soloPlay.node;
+      soloPlay.log.push(title);
+      renderStoryLogList();
+    }
+    function toggleStoryLog() {
+      document.getElementById('story-log-list').classList.toggle('open');
+    }
+
+    function currentSoloNode() { return SOLO_SCENARIO.nodes[soloPlay.node]; }
+
+    function renderScenarioNode() {
+      const node = currentSoloNode();
+      if (!node) return;
+      if (node.type === 'ending_router') {
+        const target = (soloPlay.flags.lantern && soloPlay.flags.merchant_saved) ? 'n_end_hero' : 'n_end_risky';
+        soloPlay.node = target;
+        persistSoloProgress();
+        renderScenarioNode();
+        return;
+      }
+      const card = document.getElementById('scenario-node-card');
+      if (node.type === 'narration') {
+        appendStoryLogOnce(node.title);
+        if (node.damage) {
+          card.innerHTML = '<div class="empty-msg">피해를 확인하는 중...</div>';
+          applyAutoDamage(node.damage, dmgTotal => renderNarration(card, node, dmgTotal));
+        } else {
+          renderNarration(card, node);
+        }
+        return;
+      }
+      if (node.type === 'check') { renderCheck(card, node); return; }
+      if (node.type === 'combat') { appendStoryLogOnce(node.title); renderCombat(card, node); return; }
+      if (node.type === 'ending') { appendStoryLogOnce(node.title); renderEnding(card, node); return; }
+    }
+
+    function applyAutoDamage(dice, cb) {
+      withHandlers(res => {
+        loadRollLog();
+        markActivityUnseen();
+        withHandlers(newHp => {
+          refreshSoloCharHp(newHp);
+          persistSoloProgress();
+          if (newHp <= 0) { soloPlay.node = 'n_end_defeat'; renderScenarioNode(); return; }
+          cb(res.total);
+        }, () => cb(res.total)).adjustSoloCharacterHP(soloPlay.charId, -res.total);
+      }, () => cb(0)).rollDice(dice, soloPlay.char['캐릭터명'], soloPlay.char['캐릭터명'], '피해');
+    }
+
+    function renderNarration(card, node, dmgNote) {
+      card.innerHTML = `
+        <div class="sc-node-title">${escapeHtml(node.title)}</div>
+        <div class="sc-node-text">${escapeHtml(node.text)}</div>
+        ${dmgNote ? `<div class="scenario-check-cta"><span class="cc-info">피해: <b>-${dmgNote}</b></span></div>` : ''}
+        <div class="scenario-choices">${node.choices.map(c => `<button class="scenario-choice-btn" onclick="chooseOption('${c.next}')"><span>${escapeHtml(c.label)}</span><span class="arrow">→</span></button>`).join('')}</div>`;
+    }
+
+    function chooseOption(nextId) {
+      soloPlay.node = nextId;
+      persistSoloProgress();
+      renderScenarioNode();
+    }
+
+    function renderCheck(card, node) {
+      const mod = abilityMod(soloPlay.char['능력치(JSON)'] ? (JSON.parse(soloPlay.char['능력치(JSON)'])[node.ability] || 10) : 10);
+      card.innerHTML = `
+        <div class="sc-node-title">${escapeHtml(node.title)}</div>
+        <div class="sc-node-text">${escapeHtml(node.text)}</div>
+        <div class="scenario-check-cta">
+          <span class="cc-info">${ABILITY_LABELS[node.ability]} 판정 · 목표 DC <b>${node.dc}</b> · 수정치 <b>${fmtMod(mod)}</b></span>
+          <button class="btn" id="solo-check-btn" onclick="performCheck()">판정하기</button>
+        </div>
+        <div id="solo-check-result"></div>`;
+    }
+
+    function performCheck() {
+      const node = currentSoloNode();
+      const btn = document.getElementById('solo-check-btn');
+      if (btn) btn.disabled = true;
+      const abilities = soloPlay.char['능력치(JSON)'] ? JSON.parse(soloPlay.char['능력치(JSON)']) : {};
+      const mod = abilityMod(abilities[node.ability] || 10);
+      const notation = '1d20' + (mod >= 0 ? '+' + mod : mod);
+      withHandlers(res => {
+        loadRollLog();
+        markActivityUnseen();
+        const success = res.total >= node.dc;
+        const resultEl = document.getElementById('solo-check-result');
+        if (resultEl) {
+          resultEl.innerHTML = `
+            <div class="roll-readout" style="margin-top:10px;">
+              <div class="total pop" style="font-size:30px;">${res.total}</div>
+              <div class="notation-label">${res.notation} = ${res.detail} (DC ${node.dc})</div>
+              <span class="badge ${success ? 'success' : 'fail'}">${success ? '성공' : '실패'}</span>
+            </div>
+            <div class="sc-node-text" style="margin-top:10px;">${escapeHtml(success ? node.successText : node.failText)}</div>
+            <div class="scenario-choices"><button class="scenario-choice-btn" onclick="resolveCheckResult(${success})"><span>계속하기</span><span class="arrow">→</span></button></div>`;
+        }
+      }, () => { if (btn) btn.disabled = false; }).rollDice(notation, soloPlay.char['캐릭터명'], soloPlay.char['캐릭터명'], node.title);
+    }
+
+    function resolveCheckResult(success) {
+      const node = currentSoloNode();
+      if (success && node.successFlag) soloPlay.flags[node.successFlag] = true;
+      if (!success && node.failFlag) soloPlay.flags[node.failFlag] = true;
+      soloPlay.node = success ? node.successNext : node.failNext;
+      persistSoloProgress();
+      renderScenarioNode();
+    }
+
+    function renderCombat(card, node) {
+      if (!soloPlay.combat || soloPlay.combat.nodeId !== soloPlay.node) {
+        soloPlay.combat = { nodeId: soloPlay.node, enemyHp: node.enemy.maxHp, enemyMaxHp: node.enemy.maxHp, log: [], surpriseApplied: false };
+      }
+      const combat = soloPlay.combat;
+      if (!combat.surpriseApplied && node.surpriseTextFlag && soloPlay.flags[node.surpriseTextFlag]) {
+        combat.surpriseApplied = true;
+        combat.log.push(node.surpriseText);
+      }
+      const playerHp = Number(soloPlay.char['현재HP']);
+      const playerMaxHp = Number(soloPlay.char['최대HP']);
+      card.innerHTML = `
+        <div class="sc-node-title">${escapeHtml(node.title)}</div>
+        <div class="sc-node-text">${escapeHtml(node.text)}</div>
+        <div class="combat-panel">
+          <div class="combat-side">
+            <div class="cs-name"><span>${escapeHtml(soloPlay.char['캐릭터명'])}</span><span>${playerHp} / ${playerMaxHp}</span></div>
+            ${renderHpMeter(playerHp, playerMaxHp)}
+          </div>
+          <div class="combat-side">
+            <div class="cs-name"><span>${escapeHtml(node.enemy.name)}</span><span>${combat.enemyHp} / ${combat.enemyMaxHp}</span></div>
+            ${renderHpMeter(combat.enemyHp, combat.enemyMaxHp)}
+          </div>
+        </div>
+        <div class="scenario-choices"><button class="btn" id="solo-attack-btn" onclick="combatAttack()">공격하기</button></div>
+        <div class="combat-log">${combat.log.map(l => `<div class="cl-line">${escapeHtml(l)}</div>`).join('')}</div>`;
+    }
+
+    // 전투 중 같은 노드 안에서의 라운드 갱신은 renderScenarioNode()(진입 처리 + 기록 추가)를 다시 타지 않고
+    // renderCombat()만 직접 호출한다. renderScenarioNode()는 오직 "새 노드로 넘어갈 때"만 사용한다.
+    function combatAttack() {
+      const node = currentSoloNode();
+      const combat = soloPlay.combat;
+      const btn = document.getElementById('solo-attack-btn');
+      if (btn) btn.disabled = true;
+      const abilities = soloPlay.char['능력치(JSON)'] ? JSON.parse(soloPlay.char['능력치(JSON)']) : {};
+      const klass = SOLO_CLASSES.find(c => c.name === soloPlay.char['클래스']);
+      const primaryAbility = klass ? klass.primaryAbility : 'STR';
+      const atkMod = abilityMod(abilities[primaryAbility] || 10);
+
+      withHandlers(atkRes => {
+        loadRollLog();
+        markActivityUnseen();
+        const hit = atkRes.total >= node.enemy.ac;
+        if (!hit) {
+          combat.log.push(`공격 실패 (${atkRes.total} vs AC ${node.enemy.ac})`);
+          enemyTurn(node, combat);
+          return;
+        }
+        withHandlers(dmgRes => {
+          loadRollLog();
+          markActivityUnseen();
+          combat.enemyHp = Math.max(0, combat.enemyHp - dmgRes.total);
+          combat.log.push(`명중! ${dmgRes.total}의 피해를 입혔다. (${combat.enemyHp}/${combat.enemyMaxHp})`);
+          if (combat.enemyHp <= 0) {
+            combat.log.push(node.enemy.name + '을(를) 쓰러뜨렸다.');
+            if (node.winFlag) soloPlay.flags[node.winFlag] = true;
+            soloPlay.node = node.winNext;
+            soloPlay.combat = null;
+            persistSoloProgress();
+            renderScenarioNode();
+            return;
+          }
+          enemyTurn(node, combat);
+        }, () => { if (btn) btn.disabled = false; }).rollDice('1d8+' + atkMod, soloPlay.char['캐릭터명'], soloPlay.char['캐릭터명'], '공격');
+      }, () => { if (btn) btn.disabled = false; }).rollDice('1d20+' + atkMod, soloPlay.char['캐릭터명'], soloPlay.char['캐릭터명'], '공격 판정');
+    }
+
+    function enemyTurn(node, combat) {
+      const abilities = soloPlay.char['능력치(JSON)'] ? JSON.parse(soloPlay.char['능력치(JSON)']) : {};
+      const playerAc = 10 + abilityMod(abilities.DEX || 10);
+      withHandlers(atkRes => {
+        loadRollLog();
+        markActivityUnseen();
+        const hit = atkRes.total >= playerAc;
+        if (!hit) {
+          combat.log.push(`${node.enemy.name}의 공격이 빗나갔다.`);
+          persistSoloProgress();
+          renderCombat(document.getElementById('scenario-node-card'), node);
+          return;
+        }
+        withHandlers(dmgRes => {
+          loadRollLog();
+          markActivityUnseen();
+          withHandlers(newHp => {
+            refreshSoloCharHp(newHp);
+            combat.log.push(`${node.enemy.name}의 공격이 명중! ${dmgRes.total}의 피해를 입었다.`);
+            if (newHp <= 0) {
+              soloPlay.node = 'n_end_defeat';
+              soloPlay.combat = null;
+              persistSoloProgress();
+              renderScenarioNode();
+              return;
+            }
+            persistSoloProgress();
+            renderCombat(document.getElementById('scenario-node-card'), node);
+          }).adjustSoloCharacterHP(soloPlay.charId, -dmgRes.total);
+        }).rollDice(node.enemy.dmgDice, node.enemy.name, node.enemy.name, '피해');
+      }).rollDice('1d20+' + node.enemy.atkBonus, node.enemy.name, node.enemy.name, '공격 판정');
+    }
+
+    function renderEnding(card, node) {
+      soloPlay.combat = null;
+      persistSoloProgress();
+      card.innerHTML = `
+        <span class="ending-badge ${node.outcome}">${ENDING_LABEL[node.outcome]}</span>
+        <div class="sc-node-title">${escapeHtml(node.title)}</div>
+        <div class="sc-node-text">${escapeHtml(node.text)}</div>
+        <div class="scenario-choices">
+          <button class="btn" onclick="restartSoloScenario()">다시 도전하기</button>
+          <button class="btn secondary" onclick="exitSoloPlay()">모험가 목록으로</button>
+        </div>`;
+    }
+
+    function restartSoloScenario() {
+      soloPlay.node = SOLO_SCENARIO.startNode;
+      soloPlay.flags = {};
+      soloPlay.log = [];
+      soloPlay.combat = null;
+      soloPlay.lastLoggedNode = null;
+      document.getElementById('story-log-list').innerHTML = '';
+      const fullHeal = Number(soloPlay.char['최대HP']);
+      refreshSoloCharHp(fullHeal);
+      withHandlers(() => {}).upsertSoloCharacter(Object.assign({}, soloPlay.char, { ID: soloPlay.charId, '현재HP': fullHeal }));
+      persistSoloProgress();
+      renderScenarioNode();
+    }
+
+    function exitSoloPlay() {
+      soloPlay = null;
+      setSoloView('list');
+      loadSoloCharacters();
+    }
+
+    // ---------- 초기화 ----------
+    function init() {
+      loadLocalPrefs();
+      renderLogFilters();
+      setMdView('list');
+      newCharacter();
+      loadCharacters(false);
+      loadRollLog();
+      loadLog();
+      renderSparkline([]);
+      moveIndicator(document.querySelector('nav.tabs button.active'));
+      if (localStorage.getItem('trpg_gm_mode') === '1') {
+        loadGameState();
+        loadNpcs(false);
+      }
+      // 탭이 백그라운드(다른 탭/창에 가려짐)일 때는 자동 새로고침을 쉬어 불필요한 서버 호출/부하를 줄인다.
+      // 탭이 다시 보이는 순간 한 번 즉시 갱신해 놓치는 데이터 없이 최신 상태로 맞춘다.
+      setInterval(() => { if (!document.hidden) loadRollLog(); }, 6000);
+      setInterval(() => { if (!document.hidden) loadLog(); }, 8000);
+      setInterval(() => { if (!document.hidden) loadCharacters(true, true); }, 12000);
+      setInterval(() => { if (!document.hidden && localStorage.getItem('trpg_gm_mode') === '1') { loadNpcs(true, true); loadGameState(); } }, 12000);
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+          loadRollLog();
+          loadLog();
+          if (localStorage.getItem('trpg_gm_mode') === '1') { loadNpcs(true, true); loadGameState(); }
+        }
+      });
+    }
+    init();
+  </script>
+</body>
+</html>
