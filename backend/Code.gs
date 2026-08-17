@@ -1,7 +1,10 @@
 /**
- * TRPG 플랫폼 - Apps Script 백엔드
+ * TRPG 플랫폼 - Apps Script 백엔드 (JSON API 전용)
  * 이 스크립트는 이 파일이 들어있는 스프레드시트를 데이터베이스로 사용합니다.
  * 시트 구성: 캐릭터 / 주사위기록 / 세션로그 / NPC_몬스터 / 게임상태 / 솔로_캐릭터(자동 생성)
+ *
+ * 프론트엔드(index.html)는 더 이상 이 프로젝트 안에서 서빙되지 않고 GitHub Pages 등
+ * 정적 호스팅에서 별도로 서빙되며, 이 웹앱의 /exec URL을 JSON API로만 호출한다.
  */
 
 const SHEETS = {
@@ -15,12 +18,51 @@ const SHEETS = {
 
 const SOLO_CHAR_HEADERS = ['ID', '캐릭터명', '종족', '클래스', '배경', '능력치(JSON)', '현재HP', '최대HP', '스킬/특기', '소지품', '외형', '골드', '최종수정'];
 
-// ============ 공통 유틸 ============
+// ============ API 진입점 ============
+// 프론트는 POST 요청 본문에 {method: '함수명', args: [인자...]} 형태의 JSON을
+// text/plain으로 담아 보낸다 (application/json으로 보내면 브라우저가 preflight
+// OPTIONS 요청을 보내는데, Apps Script는 doOptions를 지원하지 않아 실패한다 —
+// text/plain은 "simple request"로 취급되어 preflight 없이 바로 도달한다).
+// 호출 가능한 함수는 아래 화이트리스트에 등록된 것으로만 제한한다.
+
+const API_METHODS = {
+  getCharacters, upsertCharacter, deleteCharacter, adjustCharacterHP,
+  getNPCs, upsertNPC, deleteNPC, adjustNpcHP,
+  getSoloCharacters, upsertSoloCharacter, deleteSoloCharacter, adjustSoloCharacterHP,
+  getGameState, setGameState, getSoloProgress, setSoloProgress,
+  addSessionLog, getSessionLog, rollDice, getRollLog
+};
+
+function jsonOutput_(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
 
 function doGet(e) {
-  return HtmlService.createHtmlOutputFromFile('index')
-    .setTitle('TRPG 플랫폼')
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  return jsonOutput_({ ok: true, message: 'TRPG 플랫폼 API가 정상 동작 중입니다. POST로 {method, args}를 보내세요.' });
+}
+
+function doPost(e) {
+  let method, args;
+  try {
+    const body = JSON.parse(e.postData.contents);
+    method = body.method;
+    args = body.args || [];
+  } catch (err) {
+    return jsonOutput_({ ok: false, error: '잘못된 요청 형식입니다 (JSON 파싱 실패).' });
+  }
+
+  const fn = API_METHODS[method];
+  if (typeof fn !== 'function') {
+    return jsonOutput_({ ok: false, error: '알 수 없는 메서드: ' + method });
+  }
+
+  try {
+    const result = fn.apply(null, args);
+    return jsonOutput_({ ok: true, result: result === undefined ? null : result });
+  } catch (err) {
+    return jsonOutput_({ ok: false, error: (err && err.message) ? err.message : String(err) });
+  }
 }
 
 function getSheet_(name) {
