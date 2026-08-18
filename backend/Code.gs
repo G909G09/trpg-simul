@@ -1,4 +1,11 @@
 /**
+ * [DEPRECATED] 더 이상 사용되지 않음 — 백엔드가 Supabase로 이전되었습니다.
+ * (Apps Script 호출당 고정 지연이 체감 렉의 근본 원인이라 Postgres/Supabase로 옮김.
+ *  실제 배포는 supabase/schema.sql + docs/index.html의 Supabase 클라이언트를 씁니다.)
+ * 이 파일은 참고/롤백용으로만 저장소에 남아있고 더 이상 관리되지 않습니다.
+ * 최신 설치 절차는 설치가이드.md를 참고하세요.
+ *
+ * ---- 아래는 예전 설명(Apps Script가 현역이던 시절) ----
  * TRPG 플랫폼 - Apps Script 백엔드 (JSON API 전용)
  * 이 스크립트는 이 파일이 들어있는 스프레드시트를 데이터베이스로 사용합니다.
  * 시트 구성: 캐릭터 / 주사위기록 / 세션로그 / NPC_몬스터 / 게임상태 / 솔로_캐릭터(자동 생성)

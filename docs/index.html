@@ -942,11 +942,14 @@
 
   <div class="toast" id="toast"></div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script>
-    // ================= 백엔드 API 설정 =================
-    // Apps Script를 "웹앱으로 배포"한 뒤 나오는 /exec URL을 아래에 채워 넣으세요.
-    // (배포 관리 > 새 버전 으로 재배포해도 이 URL은 그대로 유지됩니다.)
-    const API_URL = 'https://script.google.com/macros/s/AKfycbziIF1-6c9ZaFEfENaJMMZcTR0Nyjg1PRknNZIxUztFeA3u6RKT0AI0ak3RowwDdK81Iw/exec';
+    // ================= 백엔드(Supabase) 설정 =================
+    // supabase/schema.sql을 프로젝트의 SQL Editor에서 실행한 뒤, Project Settings >
+    // API 에서 Project URL과 anon public key를 복사해 아래 두 줄을 채우세요.
+    const SUPABASE_URL = 'https://REPLACE_ME.supabase.co';
+    const SUPABASE_ANON_KEY = 'REPLACE_ME';
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // ================= 팔레트 & 색상 유틸 =================
     const CATEGORICAL_HEX = ['#3987e5','#d95926','#199e70','#c98500','#d55181','#008300','#9085e9','#e66767'];
@@ -1074,25 +1077,230 @@
       t._timer = setTimeout(() => t.style.display = 'none', 2200);
     }
 
-    // Apps Script를 정적 호스팅에서 분리한 뒤로는 google.script.run을 쓸 수 없어서,
-    // 같은 호출부(withHandlers(success, fail).메서드명(인자...))를 그대로 쓸 수 있도록
-    // Proxy로 임의의 메서드 호출을 가로채 fetch 기반 JSON API 호출로 변환한다.
-    function callApi_(method, args) {
-      return fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ method: method, args: args })
-      })
-        .then(res => {
-          if (!res.ok) throw new Error('서버 응답 오류 (HTTP ' + res.status + ')');
-          return res.json();
-        })
-        .then(payload => {
-          if (!payload || !payload.ok) {
-            throw new Error((payload && payload.error) ? payload.error : '알 수 없는 오류');
+    // Google Sheets/Apps Script에서 Supabase(Postgres)로 백엔드를 옮기면서, 같은
+    // 호출부(withHandlers(success, fail).메서드명(인자...))를 그대로 쓸 수 있도록
+    // callApi_만 Supabase 클라이언트 호출로 다시 구현했다. 테이블 컬럼명이 시트
+    // 헤더와 똑같은 한글이라 select() 결과를 화면 코드가 그대로 읽을 수 있다.
+    const TABLE = {
+      CHAR: '캐릭터', NPC: 'NPC_몬스터', SOLO_CHAR: '솔로_캐릭터',
+      LOG: '세션로그', ROLL: '주사위기록', STATE: '게임상태'
+    };
+
+    // Apps Script의 Utilities.formatDate(...,'Asia/Seoul','yyyy-MM-dd HH:mm:ss')와
+    // 동일한 포맷을 클라이언트에서 재현 (보는 사람 시간대와 무관하게 항상 서울 기준).
+    function nowStr_() {
+      const parts = new Intl.DateTimeFormat('sv-SE', {
+        timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+      }).formatToParts(new Date());
+      const p = {}; parts.forEach(x => p[x.type] = x.value);
+      return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}:${p.second}`;
+    }
+
+    async function selectAll_(table) {
+      const { data, error } = await sb.from(table).select('*');
+      if (error) throw new Error(error.message);
+      return data;
+    }
+    async function upsertRowById_(table, obj, idPrefix) {
+      const row = Object.assign({}, obj);
+      if (!row.ID) row.ID = idPrefix + Date.now();
+      const { data, error } = await sb.from(table).upsert(row, { onConflict: 'ID' }).select().single();
+      if (error) throw new Error(error.message);
+      return data;
+    }
+    async function deleteById_(table, id) {
+      const { error } = await sb.from(table).delete().eq('ID', id);
+      if (error) throw new Error(error.message);
+      return true;
+    }
+    // 델타(증감치)를 적용해 0~최대HP 사이로 clamp — 예전 Code.gs의 adjustHp_와 동일 로직.
+    async function adjustHp_(table, id, delta) {
+      const { data: rows, error: selErr } = await sb.from(table).select('*').eq('ID', id).limit(1);
+      if (selErr) throw new Error(selErr.message);
+      if (!rows || !rows.length) throw new Error('대상을 찾을 수 없습니다.');
+      const row = rows[0];
+      let newHp = Number(row['현재HP'] || 0) + delta;
+      const maxHp = Number(row['최대HP'] || 0);
+      if (newHp < 0) newHp = 0;
+      if (maxHp && newHp > maxHp) newHp = maxHp;
+      const { error: updErr } = await sb.from(table).update({ '현재HP': newHp }).eq('ID', id);
+      if (updErr) throw new Error(updErr.message);
+      return newHp;
+    }
+
+    async function getCharacters() { return selectAll_(TABLE.CHAR); }
+    async function upsertCharacter(char) { char['최종수정'] = nowStr_(); return upsertRowById_(TABLE.CHAR, char, 'c'); }
+    async function deleteCharacter(id) { return deleteById_(TABLE.CHAR, id); }
+    async function adjustCharacterHP(id, delta) { return adjustHp_(TABLE.CHAR, id, delta); }
+
+    async function getNPCs() { return selectAll_(TABLE.NPC); }
+    async function upsertNPC(npc) { return upsertRowById_(TABLE.NPC, npc, 'n'); }
+    async function deleteNPC(id) { return deleteById_(TABLE.NPC, id); }
+    async function adjustNpcHP(id, delta) { return adjustHp_(TABLE.NPC, id, delta); }
+
+    async function getSoloCharacters() { return selectAll_(TABLE.SOLO_CHAR); }
+    async function upsertSoloCharacter(char) { char['최종수정'] = nowStr_(); return upsertRowById_(TABLE.SOLO_CHAR, char, 's'); }
+    async function deleteSoloCharacter(id) {
+      await setGameState('솔로진행_' + id, '');
+      return deleteById_(TABLE.SOLO_CHAR, id);
+    }
+    async function adjustSoloCharacterHP(id, delta) { return adjustHp_(TABLE.SOLO_CHAR, id, delta); }
+
+    async function getGameState() {
+      const rows = await selectAll_(TABLE.STATE);
+      const state = {};
+      rows.forEach(r => { if (r['키']) state[r['키']] = r['값']; });
+      return state;
+    }
+    async function setGameState(key, value) {
+      const { error } = await sb.from(TABLE.STATE).upsert({ '키': key, '값': value }, { onConflict: '키' });
+      if (error) throw new Error(error.message);
+      return true;
+    }
+    async function getSoloProgress(charId) {
+      const state = await getGameState();
+      return state['솔로진행_' + charId] || '';
+    }
+    async function setSoloProgress(charId, progressJson) { return setGameState('솔로진행_' + charId, progressJson); }
+
+    async function addSessionLog(author, type, content) {
+      const { error } = await sb.from(TABLE.LOG).insert({
+        '시간': nowStr_(), '작성자': author || '익명', '유형': type || '기타', '내용': content || ''
+      });
+      if (error) throw new Error(error.message);
+      return true;
+    }
+    async function getSessionLog(limit) {
+      let q = sb.from(TABLE.LOG).select('*').order('시간', { ascending: false }).order('_id', { ascending: false });
+      if (limit) q = q.limit(limit);
+      const { data, error } = await q;
+      if (error) throw new Error(error.message);
+      return data;
+    }
+
+    // ================= 주사위 굴리기 (예전엔 서버에서 계산, 이제 클라이언트에서 계산 후 저장) =================
+    // 지원 표기법: 1d20, 2d6+3, 4d6kh3(가장 높은 3개 유지), 2d20kl1(가장 낮은 1개 유지) 등.
+    function parseDiceNotation_(notation) {
+      const cleaned = String(notation || '').replace(/\s+/g, '');
+      if (!cleaned) throw new Error('주사위 표기법을 입력하세요. 예: 1d20+5');
+      const re = /([+-]?)(\d*d\d+(?:k[hl]\d+)?|\d+)/gi;
+      let match;
+      let matchedLength = 0;
+      const terms = [];
+      while ((match = re.exec(cleaned)) !== null) {
+        matchedLength += match[0].length;
+        const sign = match[1] === '-' ? -1 : 1;
+        const body = match[2];
+        const diceMatch = body.match(/^(\d*)d(\d+)(?:k([hl])(\d+))?$/i);
+        if (diceMatch) {
+          const count = diceMatch[1] ? parseInt(diceMatch[1], 10) : 1;
+          const sides = parseInt(diceMatch[2], 10);
+          const keepType = diceMatch[3] ? diceMatch[3].toLowerCase() : null;
+          const keepCount = diceMatch[4] ? parseInt(diceMatch[4], 10) : null;
+          if (count < 1 || count > 100 || sides < 2 || sides > 1000) {
+            throw new Error('주사위 개수(1~100)나 면수(2~1000) 범위를 벗어났습니다.');
           }
-          return payload.result;
+          terms.push({ type: 'dice', sign, count, sides, keepType, keepCount });
+        } else {
+          terms.push({ type: 'flat', sign, value: parseInt(body, 10) });
+        }
+      }
+      if (terms.length === 0 || matchedLength !== cleaned.length) {
+        throw new Error('주사위 표기법을 이해하지 못했습니다. 예: 1d20+5, 2d6, 4d6kh3');
+      }
+      return terms;
+    }
+
+    async function rollDice(notation, roller, characterName, memo) {
+      const terms = parseDiceNotation_(notation);
+      let total = 0;
+      const detailParts = [];
+      const structTerms = [];
+      let hasNatural20 = false;
+      let hasNatural1 = false;
+
+      terms.forEach(term => {
+        if (term.type === 'flat') {
+          total += term.sign * term.value;
+          detailParts.push((term.sign < 0 ? '-' : (detailParts.length ? '+' : '')) + term.value);
+          structTerms.push({ kind: 'flat', sign: term.sign, value: term.value });
+          return;
+        }
+        const rolls = [];
+        for (let i = 0; i < term.count; i++) {
+          rolls.push(Math.floor(Math.random() * term.sides) + 1);
+        }
+        let keptIdx = new Set(rolls.map((v, i) => i));
+        if (term.keepType && term.keepCount && term.keepCount < term.count) {
+          const sorted = rolls.map((v, i) => ({ v, i }))
+            .sort((a, b) => term.keepType === 'h' ? b.v - a.v : a.v - b.v);
+          keptIdx = new Set(sorted.slice(0, term.keepCount).map(x => x.i));
+        }
+        const sum = rolls.reduce((acc, v, i) => acc + (keptIdx.has(i) ? v : 0), 0);
+        total += term.sign * sum;
+        if (term.sides === 20 && term.count === 1) {
+          if (rolls[0] === 20) hasNatural20 = true;
+          if (rolls[0] === 1) hasNatural1 = true;
+        }
+        const rollStr = rolls.map((v, i) => keptIdx.has(i) ? v : '(' + v + ')').join(',');
+        const countLabel = term.count + 'd' + term.sides + (term.keepType ? 'k' + term.keepType + term.keepCount : '');
+        detailParts.push((term.sign < 0 ? '-' : (detailParts.length ? '+' : '')) + countLabel + '[' + rollStr + ']');
+        structTerms.push({
+          kind: 'dice', sign: term.sign, sides: term.sides, label: countLabel,
+          dice: rolls.map((v, i) => ({ value: v, kept: keptIdx.has(i) }))
         });
+      });
+
+      const detail = detailParts.join(' ');
+      const rollerName = roller || '익명';
+      const character = characterName || '';
+      const memoText = memo || '';
+
+      const { error } = await sb.from(TABLE.ROLL).insert({
+        '시간': nowStr_(), '플레이어': rollerName, '캐릭터명': character,
+        '주사위식': notation, '결과상세': detail, '합계': total, '메모': memoText
+      });
+      if (error) throw new Error(error.message);
+
+      return {
+        total: total, detail: detail, notation: notation, terms: structTerms,
+        critical: hasNatural20 ? 'success' : (hasNatural1 ? 'fail' : null)
+      };
+    }
+
+    async function getRollLog(limit) {
+      let q = sb.from(TABLE.ROLL).select('*').order('시간', { ascending: false }).order('_id', { ascending: false });
+      if (limit) q = q.limit(limit);
+      const { data, error } = await q;
+      if (error) throw new Error(error.message);
+      return data;
+    }
+
+    async function getFeedSnapshot(includeGm) {
+      const [characters, rollLog, sessionLog] = await Promise.all([getCharacters(), getRollLog(30), getSessionLog(30)]);
+      const snapshot = { characters, rollLog, sessionLog };
+      if (includeGm) {
+        const [npcs, gameState] = await Promise.all([getNPCs(), getGameState()]);
+        snapshot.npcs = npcs; snapshot.gameState = gameState;
+      }
+      return snapshot;
+    }
+
+    const SUPA_METHODS = {
+      getCharacters, upsertCharacter, deleteCharacter, adjustCharacterHP,
+      getNPCs, upsertNPC, deleteNPC, adjustNpcHP,
+      getSoloCharacters, upsertSoloCharacter, deleteSoloCharacter, adjustSoloCharacterHP,
+      getGameState, setGameState, getSoloProgress, setSoloProgress,
+      addSessionLog, getSessionLog, rollDice, getRollLog, getFeedSnapshot
+    };
+
+    // 같은 호출부(withHandlers(success, fail).메서드명(인자...))를 그대로 쓸 수 있도록
+    // Proxy가 가로챈 메서드명을 SUPA_METHODS에서 찾아 실행한다.
+    function callApi_(method, args) {
+      const fn = SUPA_METHODS[method];
+      if (typeof fn !== 'function') return Promise.reject(new Error('알 수 없는 메서드: ' + method));
+      return Promise.resolve().then(() => fn.apply(null, args));
     }
 
     function withHandlers(successFn, failureFn) {
@@ -2854,18 +3062,37 @@
         loadGameState();
         loadNpcs(false);
       }
-      // 탭이 백그라운드(다른 탭/창에 가려짐)일 때는 자동 새로고침을 쉬어 불필요한 서버 호출/부하를 줄인다.
-      // 탭이 다시 보이는 순간 한 번 즉시 갱신해 놓치는 데이터 없이 최신 상태로 맞춘다.
-      setInterval(() => { if (!document.hidden) pollSnapshot(); }, 10000);
+      setupRealtime();
+      // Realtime 구독이 주된 동기화 수단이라 폴링은 60초 간격의 백업(구독 끊김 대비)일 뿐이다.
+      // 탭이 백그라운드(다른 탭/창에 가려짐)일 때는 쉬고, 다시 보이는 순간 즉시 한 번 갱신한다
+      // (백그라운드에서는 브라우저가 websocket도 쉬게 할 수 있어 복귀 시 놓친 변경을 잡아준다).
+      setInterval(() => { if (!document.hidden) pollSnapshot(); }, 60000);
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden) pollSnapshot(true);
       });
     }
 
-    // 예전에는 캐릭터/주사위기록/세션로그/[GM모드면]NPC+게임상태를 각각 다른 간격의
-    // setInterval로 따로 폴링했는데, Apps Script 호출 하나하나에 고정 지연이 있어서
-    // 이게 겹쳐 돌 때마다 체감 렉이 쌓였다. getFeedSnapshot 하나로 묶어 왕복 횟수를
-    // 1/4로 줄이고, 데이터가 실제로 안 바뀌었으면 재렌더까지 건너뛴다.
+    // ================= Realtime 구독 (변경이 생기는 즉시 반영, 폴링 대기 없음) =================
+    // 예전에는 폴링 간격(최대 10초)만큼 기다려야 다른 사람의 변경이 보였는데, Supabase
+    // Realtime으로 테이블 변경을 구독해서 수십~수백ms 안에 반영되게 했다. 여러 변경이
+    // 짧은 간격으로 몰려와도(예: 전투 중 연속 굴림) 재요청이 겹치지 않도록 살짝 debounce한다.
+    let realtimeDebounceTimer = null;
+    function scheduleRealtimeRefresh() {
+      clearTimeout(realtimeDebounceTimer);
+      realtimeDebounceTimer = setTimeout(() => pollSnapshot(true), 250);
+    }
+    function setupRealtime() {
+      sb.channel('trpg-realtime')
+        .on('postgres_changes', { event: '*', schema: 'public', table: '캐릭터' }, scheduleRealtimeRefresh)
+        .on('postgres_changes', { event: '*', schema: 'public', table: '주사위기록' }, scheduleRealtimeRefresh)
+        .on('postgres_changes', { event: '*', schema: 'public', table: '세션로그' }, scheduleRealtimeRefresh)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'NPC_몬스터' }, scheduleRealtimeRefresh)
+        .on('postgres_changes', { event: '*', schema: 'public', table: '게임상태' }, scheduleRealtimeRefresh)
+        .subscribe();
+    }
+
+    // 여러 테이블의 최신 상태를 한 번에 모아 화면에 반영한다. 데이터가 실제로 안
+    // 바뀌었으면(예: 백업 폴링이 Realtime과 겹친 경우) 재렌더까지 건너뛴다.
     let lastSnapshotJson = null;
     function pollSnapshot(force) {
       const gmMode = localStorage.getItem('trpg_gm_mode') === '1';
