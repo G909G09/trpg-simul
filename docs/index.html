@@ -65,15 +65,21 @@
     svg.icon { display: inline-block; vertical-align: -3px; flex: none; }
 
     /* ---------- 배경의 은은한 컬러 블롭 (글라스가 비출 대상) ---------- */
+    /* 예전에는 blobDrift가 infinite alternate로 영원히 움직여서, 그 위에 얹힌 backdrop-filter
+       카드들이 매 프레임 블러를 다시 계산해야 했다(배경이 끊임없이 바뀌니까). 이게 탭 전환 같은
+       순수 클라이언트 동작까지 밀리게 만드는 상시 부하의 주범이었다. 페이지가 열릴 때 한 번만
+       짧게 움직이고 멈추도록(1회, forwards로 정지 위치 고정) 바꿔서, 그 이후에는 배경이 고정되어
+       backdrop-filter 재계산 비용이 거의 사라지게 했다.
+    */
     .bg-blobs { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
     .bg-blobs span {
       position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.5;
-      animation: blobDrift 22s ease-in-out infinite alternate;
+      animation: blobDrift 6s ease-out 1 forwards;
     }
     .bg-blobs span:nth-child(1) { width: 560px; height: 560px; left: -140px; top: -140px; background: var(--cat-1); }
-    .bg-blobs span:nth-child(2) { width: 500px; height: 500px; right: -120px; top: 4%; background: var(--cat-7); animation-delay: -6s; animation-duration: 26s; }
-    .bg-blobs span:nth-child(3) { width: 460px; height: 460px; left: 18%; bottom: -200px; background: var(--cat-3); animation-delay: -12s; animation-duration: 30s; }
-    .bg-blobs span:nth-child(4) { width: 420px; height: 420px; left: 40%; top: 30%; background: var(--cat-5); opacity: 0.32; animation-delay: -18s; animation-duration: 34s; }
+    .bg-blobs span:nth-child(2) { width: 500px; height: 500px; right: -120px; top: 4%; background: var(--cat-7); animation-delay: 0.15s; }
+    .bg-blobs span:nth-child(3) { width: 460px; height: 460px; left: 18%; bottom: -200px; background: var(--cat-3); animation-delay: 0.3s; }
+    .bg-blobs span:nth-child(4) { width: 420px; height: 420px; left: 40%; top: 30%; background: var(--cat-5); opacity: 0.32; animation-delay: 0.45s; }
     @keyframes blobDrift { from { transform: translate(0, 0) scale(1); } to { transform: translate(40px, -30px) scale(1.12); } }
     header, main, .fab, .drawer, .drawer-backdrop, .bottom-nav, .toast { position: relative; z-index: 1; }
 
