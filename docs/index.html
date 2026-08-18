@@ -2069,6 +2069,7 @@
       title: '안개 낀 숲',
       teaser: '실종된 상단을 좇아 안개 낀 숲으로. 고블린과 광신도, 그리고 숲 깊은 곳의 비밀.',
       startNode: 'n1_start',
+      defeatNode: 'n_end_defeat',
       nodes: {
         n1_start: {
           type: 'narration', title: '숲의 초입',
@@ -2283,6 +2284,7 @@
       title: '안개 항구의 실종자들',
       teaser: '항구 마을에서 하나둘 사라지는 사람들. 부둣가 창고에 얽힌 어두운 진실을 쫓는 이야기.',
       startNode: 'h1_start',
+      defeatNode: 'h_end_defeat',
       nodes: {
         h1_start: {
           type: 'narration', title: '안개 항구에 도착하다',
@@ -2809,7 +2811,13 @@
 
     function renderScenarioNode() {
       const node = currentSoloNode();
-      if (!node) return;
+      if (!node) {
+        // 존재하지 않는 노드 id로 이동하면(시나리오 데이터 오류 등) 화면이 조용히 멈추는
+        // 대신 알 수 있게 로그+토스트를 남긴다.
+        console.error('존재하지 않는 시나리오 노드:', soloPlay.node, '(시나리오:', soloPlay.scenarioId, ')');
+        toast('오류: 진행할 수 없는 장면입니다. 모험가 목록으로 돌아가주세요.');
+        return;
+      }
       if (node.type === 'ending_router') {
         // routes를 순서대로 검사해 모든 flags가 true인 첫 규칙을 채택한다. flags:[]는
         // every()가 빈 배열에서 항상 true이므로 목록 맨 끝에 두면 기본값(fallback)으로 동작한다.
@@ -2842,7 +2850,7 @@
         withHandlers(newHp => {
           refreshSoloCharHp(newHp);
           persistSoloProgress();
-          if (newHp <= 0) { soloPlay.node = 'n_end_defeat'; renderScenarioNode(); return; }
+          if (newHp <= 0) { soloPlay.node = findScenario(soloPlay.scenarioId).defeatNode; renderScenarioNode(); return; }
           cb(res.total);
         }, () => cb(res.total)).adjustSoloCharacterHP(soloPlay.charId, -res.total);
       }, () => cb(0)).rollDice(dice, soloPlay.char['캐릭터명'], soloPlay.char['캐릭터명'], '피해');
@@ -2996,7 +3004,7 @@
             refreshSoloCharHp(newHp);
             combat.log.push(`${node.enemy.name}의 공격이 명중! ${dmgRes.total}의 피해를 입었다.`);
             if (newHp <= 0) {
-              soloPlay.node = 'n_end_defeat';
+              soloPlay.node = node.loseNext || findScenario(soloPlay.scenarioId).defeatNode;
               soloPlay.combat = null;
               persistSoloProgress();
               renderScenarioNode();
