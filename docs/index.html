@@ -2848,9 +2848,10 @@
         loadRollLog();
         markActivityUnseen();
         withHandlers(newHp => {
+          // 체력이 0이 돼도(adjustSoloCharacterHP가 이미 0 밑으로는 안 내려가게 clamp함)
+          // 바로 패배로 끝내지 않고 이야기를 계속 진행한다.
           refreshSoloCharHp(newHp);
           persistSoloProgress();
-          if (newHp <= 0) { soloPlay.node = findScenario(soloPlay.scenarioId).defeatNode; renderScenarioNode(); return; }
           cb(res.total);
         }, () => cb(res.total)).adjustSoloCharacterHP(soloPlay.charId, -res.total);
       }, () => cb(0)).rollDice(dice, soloPlay.char['캐릭터명'], soloPlay.char['캐릭터명'], '피해');
@@ -3001,15 +3002,10 @@
           loadRollLog();
           markActivityUnseen();
           withHandlers(newHp => {
+            // 체력이 0이 돼도(adjustSoloCharacterHP가 이미 0 밑으로는 안 내려가게 clamp함)
+            // 바로 패배로 끝내지 않고 전투를 계속 진행한다 — 0/최대HP로 표시된 채 계속 싸울 수 있다.
             refreshSoloCharHp(newHp);
-            combat.log.push(`${node.enemy.name}의 공격이 명중! ${dmgRes.total}의 피해를 입었다.`);
-            if (newHp <= 0) {
-              soloPlay.node = node.loseNext || findScenario(soloPlay.scenarioId).defeatNode;
-              soloPlay.combat = null;
-              persistSoloProgress();
-              renderScenarioNode();
-              return;
-            }
+            combat.log.push(`${node.enemy.name}의 공격이 명중! ${dmgRes.total}의 피해를 입었다.` + (newHp <= 0 ? ' 체력이 바닥났다!' : ''));
             persistSoloProgress();
             renderCombat(document.getElementById('scenario-node-card'), node);
           }).adjustSoloCharacterHP(soloPlay.charId, -dmgRes.total);
